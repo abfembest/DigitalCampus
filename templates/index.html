@@ -262,9 +262,9 @@
                      </article>
                  </div>
             </div>
-        </div>
+        </section>
 
-        <!-- About Section -->
+    <!-- About Section -->
         <section id="about" class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="about-heading">
             <div class="container-responsive">
                 <div class="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
@@ -292,9 +292,10 @@
             </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Programs Section -->
+        {% if featured_programs %}
         <section id="programs" class="py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-labelledby="programs-heading">
             <div class="container-responsive">
                 <div class="text-center mb-10 sm:mb-12 lg:mb-16">
@@ -340,8 +341,50 @@
         </div>
     </div>
 </section>
+{% endif %}
+
+<!-- Theological School Advertisement -->
+{% if show_theology_ad %}
+<section id="theological-school" class="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-primary-950 via-purple-900 to-purple-800 overflow-hidden" aria-labelledby="theology-heading">
+    <div class="absolute inset-0 opacity-10 pointer-events-none" aria-hidden="true">
+        <div class="absolute top-10 right-0 w-72 h-72 bg-gold-400 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-8 sm:p-12 lg:p-14 text-center">
+            <div class="inline-flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <i data-lucide="church" class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gold-400 flex-shrink-0" aria-hidden="true"></i>
+                <h2 id="theology-heading" class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white font-display leading-tight">
+                    School of Theology
+                </h2>
+            </div>
+            <p class="text-lg sm:text-xl lg:text-2xl font-semibold text-gold-300 font-display leading-snug mb-3 sm:mb-4">
+                Called to Ministry? Answer It at Melchisedec Graduate Bible Academy
+            </p>
+            <p class="text-purple-200 text-sm sm:text-base lg:text-lg leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto">
+                Our theological sister institution trains end-time ministers of the Gospel through accredited Bible college programs &mdash; completely free of charge. Explore certificate, diploma, and degree tracks in theology, pastoral studies, and Christian education.
+            </p>
+            <a href="https://theology.miuedu.com/" target="_blank"
+               class="group relative inline-flex items-center justify-center w-full sm:w-auto px-8 py-4 sm:px-10 sm:py-5 text-base sm:text-lg font-bold text-white bg-transparent rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_60px_-15px_rgba(251,191,36,0.6)] focus:outline-none focus:ring-4 focus:ring-gold-400/50 sm:min-w-[220px] border-2 border-white/80 hover:border-gold-400"
+               aria-label="Explore Theological Programs at Melchisedec Graduate Bible Academy">
+                <span class="relative z-10 flex items-center gap-3">
+                    <i data-lucide="church" class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"></i>
+                    <span class="tracking-wider group-hover:text-primary-950 transition-colors duration-300">VISIT THEOLOGICAL SCHOOL</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 group-hover:text-primary-950 transition-all duration-300"></i>
+                </span>
+                <div class="absolute inset-0 bg-gradient-to-r from-gold-400 to-gold-300 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-right"></div>
+                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
 
 <!-- Academics Section -->
+{% if faculties %}
 <section id="academics" class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="academics-heading">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-10 sm:mb-12 lg:mb-16">
@@ -393,6 +436,7 @@
     </div>
     </div>
 </section>
+{% endif %}
 
 <!-- Admissions Section -->
 <!-- Admissions & Financial Aid — compact two-column + tab panel -->
@@ -639,6 +683,7 @@ function admTab(btn, panelId) {
 </script>
 
 <!-- Testimonials Section -->
+{% if testimonials %}
 <section class="py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-labelledby="testimonials-heading">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-10 sm:mb-12">
@@ -683,6 +728,7 @@ function admTab(btn, panelId) {
         </div>
     </div>
 </section>
+{% endif %}
 
 <!-- Contact Form Section -->
 <section id="contact" class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="contact-heading">
@@ -969,7 +1015,7 @@ function admTab(btn, panelId) {
         </div>
 
         <div class="relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
-            <div class="relative w-full h-72 sm:h-96 sm:h-[500px] lg:h-[600px]">
+            <div class="relative w-full h-72 sm:h-96 md:h-[500px] lg:h-[600px]">
                 {% if site_config.campus_map_embed_url %}
                 <div class="absolute inset-0 w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">{{ site_config.campus_map_embed_url|safe }}</div>
                 {% else %}
@@ -1417,6 +1463,7 @@ a[href="{% url 'eduweb:admission_requirement' %}"]:hover .relative.z-10 span {
     })();
 
     // Testimonials — DB-driven
+    {% if testimonials %}
     const testimonials = [
         {% for t in testimonials %}
         {
@@ -1489,6 +1536,7 @@ a[href="{% url 'eduweb:admission_requirement' %}"]:hover .relative.z-10 span {
     testimonialSection.addEventListener('mouseleave', () => {
         testimonialTimer = setInterval(nextTestimonial, testimonialInterval);
     });
+    {% endif %}
 
     lucide.createIcons();
 </script>

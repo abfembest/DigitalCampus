@@ -23,7 +23,7 @@ from django.core.paginator import Paginator
 from django.db import transaction, connection, IntegrityError
 from django.db.models import Q, Count, Sum, Avg, Value, DecimalField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -54,6 +54,7 @@ from eduweb.models import (
     Faculty,
     FeePayment,
     InstitutionMember,
+    InstitutionPartner,
     LMSCourse,
     LibraryItem,
     Notification,
@@ -101,6 +102,7 @@ from management.forms import (
     EnrollmentForm,
     FacultyForm,
     InstitutionMemberForm,
+    InstitutionPartnerForm,
     IntakeCreateFormSet,
     LMSCourseForm,
     LibraryItemForm,
@@ -373,24 +375,31 @@ def admin_compose_message(request):
     if request.method == 'POST':
         form = AdminMessageComposeForm(request.POST)
         if form.is_valid():
-            msg = form.save(commit=False)
-            msg.sender = request.user
-            msg.save()
-            # In-app notification to recipient
-            _notify(
-                user=msg.recipient,
-                title=f'New Message from {request.user.get_full_name() or request.user.username}',
-                message=f'You have a new message: "{msg.subject}"',
-                notif_type='message',
-                link=f'/management/inbox/{msg.id}/',
-            )
             try:
-                send_new_message_email(msg.recipient, request.user, msg)
+                with transaction.atomic():
+                    msg = form.save(commit=False)
+                    msg.sender = request.user
+                    msg.save()
             except Exception:
-                logger.exception('Failed to send new-message email to %s', msg.recipient)
-            messages.success(request, 'Message sent successfully!')
-            return redirect('management:admin_inbox')
-        messages.error(request, 'Please fix the errors below.')
+                logger.exception('admin_compose_message: unexpected error saving message')
+                messages.error(request, 'Something went wrong while sending this message. Please try again.')
+            else:
+                # In-app notification to recipient
+                _notify(
+                    user=msg.recipient,
+                    title=f'New Message from {request.user.get_full_name() or request.user.username}',
+                    message=f'You have a new message: "{msg.subject}"',
+                    notif_type='message',
+                    link=f'/management/inbox/{msg.id}/',
+                )
+                try:
+                    send_new_message_email(msg.recipient, request.user, msg)
+                except Exception:
+                    logger.exception('Failed to send new-message email to %s', msg.recipient)
+                messages.success(request, 'Message sent successfully!')
+                return redirect('management:admin_inbox')
+        else:
+            messages.error(request, 'Please fix the errors below.')
     else:
         initial = {}
         to_id = request.GET.get('to')
@@ -440,26 +449,32 @@ def admin_message_thread(request, message_id):
         body = request.POST.get('body', '').strip()
         if len(body) >= 5:
             reply_to = msg.sender if msg.recipient == request.user else msg.recipient
-            Message.objects.create(
-                sender=request.user,
-                recipient=reply_to,
-                subject=f'Re: {msg.subject}',
-                body=body,
-                parent=msg,
-            )
-            _notify(
-                user=reply_to,
-                title=f'Reply from {request.user.get_full_name() or request.user.username}',
-                message=f'New reply on: "{msg.subject}"',
-                notif_type='message',
-                link=f'/management/inbox/{msg.id}/',
-            )
             try:
-                send_new_message_email(reply_to, request.user, msg)
+                with transaction.atomic():
+                    Message.objects.create(
+                        sender=request.user,
+                        recipient=reply_to,
+                        subject=f'Re: {msg.subject}',
+                        body=body,
+                        parent=msg,
+                    )
             except Exception:
-                logger.exception('Failed to send reply-notification email to %s', reply_to)
-            messages.success(request, 'Reply sent!')
-            return redirect('management:admin_message_thread', message_id=message_id)
+                logger.exception('admin_message_thread: unexpected error saving reply for message_id=%s', message_id)
+                messages.error(request, 'Something went wrong while sending your reply. Please try again.')
+            else:
+                _notify(
+                    user=reply_to,
+                    title=f'Reply from {request.user.get_full_name() or request.user.username}',
+                    message=f'New reply on: "{msg.subject}"',
+                    notif_type='message',
+                    link=f'/management/inbox/{msg.id}/',
+                )
+                try:
+                    send_new_message_email(reply_to, request.user, msg)
+                except Exception:
+                    logger.exception('Failed to send reply-notification email to %s', reply_to)
+                messages.success(request, 'Reply sent!')
+                return redirect('management:admin_message_thread', message_id=message_id)
         messages.error(request, 'Reply must be at least 5 characters.')
 
     return render(request, 'management/message_thread.html', {
@@ -704,20 +719,6 @@ def make_decision(request, pk):
             except (ValueError, TypeError):
                 pass
 
-        # Update academic session and entry level if provided in decision form
-        session_id = request.POST.get('academic_session')
-        entry_level = request.POST.get('entry_level')
-        if session_id:
-            try:
-                application.academic_session = AcademicSession.objects.get(id=session_id)
-            except AcademicSession.DoesNotExist:
-                pass
-        if entry_level:
-            try:
-                application.entry_level = int(entry_level)
-            except (ValueError, TypeError):
-                pass
-
         # Update application status
         if decision == 'approved':
             application.status = 'approved'
@@ -727,7 +728,12 @@ def make_decision(request, pk):
         application.review_notes = decision_notes
         application.reviewer = request.user
         application.reviewed_at = timezone.now()
-        application.save()
+        try:
+            application.save()
+        except Exception:
+            logger.exception('make_decision: unexpected error saving decision for application pk=%s', pk)
+            messages.error(request, 'Something went wrong while recording this decision. Please try again.')
+            return redirect('management:application_detail', application_id=application.application_id)
 
         # On approval: sync program / dept / faculty / session / level to UserProfile
         if decision == 'approved' and application.user:
@@ -969,7 +975,17 @@ def faculty_create(request):
 
         form = FacultyForm(request.POST, request.FILES)
         if form.is_valid():
-            faculty = form.save()
+            try:
+                with transaction.atomic():
+                    faculty = form.save()
+            except IntegrityError:
+                logger.exception('faculty_create: IntegrityError saving faculty')
+                messages.error(request, 'Could not save this faculty — that code may already be in use.')
+                return render(request, 'management/faculties_list.html', _faculty_ctx(form=form))
+            except Exception:
+                logger.exception('faculty_create: unexpected error saving faculty')
+                messages.error(request, 'Something went wrong while saving this faculty. Please try again.')
+                return render(request, 'management/faculties_list.html', _faculty_ctx(form=form))
             messages.success(request, f'Faculty "{faculty.name}" created successfully!')
             return redirect('management:faculties_list')
         messages.error(request, 'Please correct the errors below.')
@@ -988,7 +1004,17 @@ def faculty_edit(request, pk):
 
         form = FacultyForm(request.POST, request.FILES, instance=faculty)
         if form.is_valid():
-            faculty = form.save()
+            try:
+                with transaction.atomic():
+                    faculty = form.save()
+            except IntegrityError:
+                logger.exception('faculty_edit: IntegrityError saving faculty pk=%s', pk)
+                messages.error(request, 'Could not save this faculty — that code may already be in use.')
+                return render(request, 'management/faculties_list.html', _faculty_ctx(form=form, edit_pk=pk))
+            except Exception:
+                logger.exception('faculty_edit: unexpected error saving faculty pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this faculty. Please try again.')
+                return render(request, 'management/faculties_list.html', _faculty_ctx(form=form, edit_pk=pk))
             messages.success(request, f'Faculty "{faculty.name}" updated successfully!')
             return redirect('management:faculties_list')
         messages.error(request, 'Please correct the errors below.')
@@ -1015,8 +1041,12 @@ def faculty_delete(request, pk):
             return redirect('management:faculties_list')
 
         name = faculty.name
-        faculty.delete()
-        messages.success(request, f'Faculty "{name}" deleted successfully!')
+        try:
+            faculty.delete()
+            messages.success(request, f'Faculty "{name}" deleted successfully!')
+        except Exception:
+            logger.exception('faculty_delete: unexpected error deleting faculty pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this faculty. Please try again.')
     return redirect('management:faculties_list')
 
 
@@ -1057,11 +1087,20 @@ def blog_post_create(request):
 
         form = BlogPostForm(request.POST, request.FILES)
         if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            messages.success(request, f'Blog post "{post.title}" created successfully!')
-            return redirect('management:blog_posts_list')
+            try:
+                with transaction.atomic():
+                    post = form.save(commit=False)
+                    post.author = request.user
+                    post.save()
+            except IntegrityError:
+                logger.exception('blog_post_create: IntegrityError saving post')
+                messages.error(request, 'Could not save this post — please check the details and try again.')
+            except Exception:
+                logger.exception('blog_post_create: unexpected error saving post')
+                messages.error(request, 'Something went wrong while saving this post. Please try again.')
+            else:
+                messages.success(request, f'Blog post "{post.title}" created successfully!')
+                return redirect('management:blog_posts_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1091,9 +1130,18 @@ def blog_post_edit(request, pk):
 
         form = BlogPostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
-            post = form.save()
-            messages.success(request, f'Blog post "{post.title}" updated successfully!')
-            return redirect('management:blog_posts_list')
+            try:
+                with transaction.atomic():
+                    post = form.save()
+            except IntegrityError:
+                logger.exception('blog_post_edit: IntegrityError saving post pk=%s', pk)
+                messages.error(request, 'Could not save this post — please check the details and try again.')
+            except Exception:
+                logger.exception('blog_post_edit: unexpected error saving post pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this post. Please try again.')
+            else:
+                messages.success(request, f'Blog post "{post.title}" updated successfully!')
+                return redirect('management:blog_posts_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1123,8 +1171,12 @@ def blog_post_delete(request, pk):
             return redirect('management:blog_posts_list')
 
         post_title = post.title
-        post.delete()
-        messages.success(request, f'Blog post "{post_title}" deleted successfully!')
+        try:
+            post.delete()
+            messages.success(request, f'Blog post "{post_title}" deleted successfully!')
+        except Exception:
+            logger.exception('blog_post_delete: unexpected error deleting post pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this post. Please try again.')
         return redirect('management:blog_posts_list')
 
     return redirect('management:blog_posts_list')
@@ -1160,9 +1212,18 @@ def blog_category_create(request):
 
         form = BlogCategoryForm(request.POST)
         if form.is_valid():
-            category = form.save()
-            messages.success(request, f'Category "{category.name}" created successfully!')
-            return redirect('management:blog_categories_list')
+            try:
+                with transaction.atomic():
+                    category = form.save()
+            except IntegrityError:
+                logger.exception('blog_category_create: IntegrityError saving category')
+                messages.error(request, 'Could not save this category — that name may already be in use.')
+            except Exception:
+                logger.exception('blog_category_create: unexpected error saving category')
+                messages.error(request, 'Something went wrong while saving this category. Please try again.')
+            else:
+                messages.success(request, f'Category "{category.name}" created successfully!')
+                return redirect('management:blog_categories_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1192,9 +1253,18 @@ def blog_category_edit(request, pk):
 
         form = BlogCategoryForm(request.POST, instance=category)
         if form.is_valid():
-            category = form.save()
-            messages.success(request, f'Category "{category.name}" updated successfully!')
-            return redirect('management:blog_categories_list')
+            try:
+                with transaction.atomic():
+                    category = form.save()
+            except IntegrityError:
+                logger.exception('blog_category_edit: IntegrityError saving category pk=%s', pk)
+                messages.error(request, 'Could not save this category — that name may already be in use.')
+            except Exception:
+                logger.exception('blog_category_edit: unexpected error saving category pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this category. Please try again.')
+            else:
+                messages.success(request, f'Category "{category.name}" updated successfully!')
+                return redirect('management:blog_categories_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1232,8 +1302,12 @@ def blog_category_delete(request, pk):
             return redirect('management:blog_categories_list')
 
         category_name = category.name
-        category.delete()
-        messages.success(request, f'Category "{category_name}" deleted successfully!')
+        try:
+            category.delete()
+            messages.success(request, f'Category "{category_name}" deleted successfully!')
+        except Exception:
+            logger.exception('blog_category_delete: unexpected error deleting category pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this category. Please try again.')
         return redirect('management:blog_categories_list')
 
     return redirect('management:blog_categories_list')
@@ -1391,43 +1465,50 @@ def user_create(request):
     if not form.is_valid():
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
-    with transaction.atomic():
-        user = form.save(commit=False)
-        role = form.cleaned_data.get('role', 'student')
+    try:
+        with transaction.atomic():
+            user = form.save(commit=False)
+            role = form.cleaned_data.get('role', 'student')
 
-        # is_staff (full admin-portal bypass) may only be granted by a true
-        # superuser — user_management.can_create alone isn't enough to hand
-        # out that tier to someone else.
-        if not request.user.is_superuser:
-            user.is_staff = False
+            # is_staff (full admin-portal bypass) may only be granted by a true
+            # superuser — user_management.can_create alone isn't enough to hand
+            # out that tier to someone else.
+            if not request.user.is_superuser:
+                user.is_staff = False
 
-        # Enforce capitalization on names
-        user.first_name = user.first_name.strip().title()
-        user.last_name = user.last_name.strip().title()
+            # Enforce capitalization on names
+            user.first_name = user.first_name.strip().title()
+            user.last_name = user.last_name.strip().title()
 
-        # Set the password correctly so it is hashed in the database
-        user.set_password(raw_password)
+            # Set the password correctly so it is hashed in the database
+            user.set_password(raw_password)
 
-        # Account starts inactive — activated automatically after email verification
-        user.is_active = False
-        user.save()
+            # Account starts inactive — activated automatically after email verification
+            user.is_active = False
+            user.save()
 
-        # Sync role onto the auto-created profile
-        user.profile.role = role
-        user.profile.email_verified = False
-        user.profile.must_change_password = True
-        user.profile.save(update_fields=['role', 'email_verified', 'must_change_password'])
+            # Sync role onto the auto-created profile
+            user.profile.role = role
+            user.profile.email_verified = False
+            user.profile.must_change_password = True
+            user.profile.save(update_fields=['role', 'email_verified', 'must_change_password'])
 
-        AuditLog.objects.create(
-            user=request.user,
-            action='create',
-            model_name='User',
-            object_id=str(user.pk),
-            description=(
-                f'{request.user.username} created user {user.username} with role "{role}"'
-                + (' and staff (admin-portal) access' if user.is_staff else '') + '.'
-            ),
-        )
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='User',
+                object_id=str(user.pk),
+                description=(
+                    f'{request.user.username} created user {user.username} with role "{role}"'
+                    + (' and staff (admin-portal) access' if user.is_staff else '') + '.'
+                ),
+            )
+    except IntegrityError:
+        logger.exception('user_create: IntegrityError creating user')
+        return JsonResponse({'success': False, 'message': 'Could not create this user — that username or email may already be in use.'}, status=400)
+    except Exception:
+        logger.exception('user_create: unexpected error creating user')
+        return JsonResponse({'success': False, 'message': 'Something went wrong while creating this user. Please try again.'}, status=500)
 
     # Delegate email entirely to the service module (non-fatal if it fails)
     email_sent = send_admin_created_user_email(request, user, raw_password)
@@ -1487,52 +1568,66 @@ def user_edit(request, pk):
         messages.error(request, 'Please fix the errors below.')
         return redirect('management:users_list')
 
-    with transaction.atomic():
-        updated_user    = user_form.save(commit=False)
-        updated_profile = profile_form.save(commit=False)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    try:
+        with transaction.atomic():
+            updated_user    = user_form.save(commit=False)
+            updated_profile = profile_form.save(commit=False)
 
-        # is_staff (full admin-portal bypass) may only be granted/revoked by
-        # a true superuser — user_management.can_edit alone isn't enough,
-        # and this also blocks a non-superuser admin from unlocking
-        # themselves via their own user_edit request.
-        if not request.user.is_superuser:
-            updated_user.is_staff = original_is_staff
+            # is_staff (full admin-portal bypass) may only be granted/revoked by
+            # a true superuser — user_management.can_edit alone isn't enough,
+            # and this also blocks a non-superuser admin from unlocking
+            # themselves via their own user_edit request.
+            if not request.user.is_superuser:
+                updated_user.is_staff = original_is_staff
 
-        updated_user.save()
-        updated_profile.save()
+            updated_user.save()
+            updated_profile.save()
 
-        if updated_user.is_staff != original_is_staff:
-            AuditLog.objects.create(
-                user=request.user,
-                action='permission_change',
-                model_name='User',
-                object_id=str(updated_user.pk),
-                description=(
-                    f'{request.user.username} '
-                    f'{"granted" if updated_user.is_staff else "revoked"} admin-portal (is_staff) '
-                    f'access for {updated_user.username}.'
-                ),
-            )
+            if updated_user.is_staff != original_is_staff:
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='permission_change',
+                    model_name='User',
+                    object_id=str(updated_user.pk),
+                    description=(
+                        f'{request.user.username} '
+                        f'{"granted" if updated_user.is_staff else "revoked"} admin-portal (is_staff) '
+                        f'access for {updated_user.username}.'
+                    ),
+                )
 
-        # Role can also change from this form's role dropdown, not just via
-        # user_change_role — clear stale overrides here too so the user
-        # starts clean on whatever role they were just switched to.
-        if updated_profile.role != original_role:
-            _clear_stale_permission_overrides(updated_user)
-            AuditLog.objects.create(
-                user=request.user,
-                action='permission_change',
-                model_name='UserProfile',
-                object_id=str(updated_user.pk),
-                description=(
-                    f'Changed role for {updated_user.username} from "{original_role}" '
-                    f'to "{updated_profile.role}" via user edit. Prior permission overrides were cleared.'
-                ),
-            )
- 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Role can also change from this form's role dropdown, not just via
+            # user_change_role — clear stale overrides here too so the user
+            # starts clean on whatever role they were just switched to.
+            if updated_profile.role != original_role:
+                _clear_stale_permission_overrides(updated_user)
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='permission_change',
+                    model_name='UserProfile',
+                    object_id=str(updated_user.pk),
+                    description=(
+                        f'Changed role for {updated_user.username} from "{original_role}" '
+                        f'to "{updated_profile.role}" via user edit. Prior permission overrides were cleared.'
+                    ),
+                )
+    except IntegrityError:
+        logger.exception('user_edit: IntegrityError updating user pk=%s', pk)
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': 'Could not save — that username or email may already be in use.'}, status=400)
+        messages.error(request, 'Could not save — that username or email may already be in use.')
+        return redirect('management:users_list')
+    except Exception:
+        logger.exception('user_edit: unexpected error updating user pk=%s', pk)
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': 'Something went wrong while saving. Please try again.'}, status=500)
+        messages.error(request, 'Something went wrong while saving. Please try again.')
+        return redirect('management:users_list')
+
+    if is_ajax:
         return JsonResponse({'success': True, 'message': f'User {user.username} updated.'})
- 
+
     messages.success(request, f'User {user.username} updated successfully.')
     return redirect('management:users_list')
  
@@ -1785,24 +1880,32 @@ def user_permissions(request, pk):
         return redirect('management:users_list')
 
     MODULES, ACTION_FIELDS, _ = _permission_modules_for_role(target.profile.role)
-    with transaction.atomic():
-        for module in MODULES:
-            prefix = f'perm_{module}_'
-            row_data = {
-                f: bool(request.POST.get(f'{prefix}{f}'))
-                for f in ACTION_FIELDS
-            }
-            StaffPermissionsMatrix.objects.update_or_create(
-                user=target, module=module, role=None,
-                defaults={**row_data, 'updated_by': request.user},
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    try:
+        with transaction.atomic():
+            for module in MODULES:
+                prefix = f'perm_{module}_'
+                row_data = {
+                    f: bool(request.POST.get(f'{prefix}{f}'))
+                    for f in ACTION_FIELDS
+                }
+                StaffPermissionsMatrix.objects.update_or_create(
+                    user=target, module=module, role=None,
+                    defaults={**row_data, 'updated_by': request.user},
+                )
+            AuditLog.objects.create(
+                user=request.user,
+                action='permission_change',
+                model_name='StaffPermissionsMatrix',
+                object_id=str(target.pk),
+                description=f'Updated user-level permission overrides for {target.username}.',
             )
-        AuditLog.objects.create(
-            user=request.user,
-            action='permission_change',
-            model_name='StaffPermissionsMatrix',
-            object_id=str(target.pk),
-            description=f'Updated user-level permission overrides for {target.username}.',
-        )
+    except Exception:
+        logger.exception('user_permissions: unexpected error saving overrides for user pk=%s', pk)
+        if is_ajax:
+            return JsonResponse({'success': False, 'error': 'Something went wrong while saving permissions. Please try again.'}, status=500)
+        messages.error(request, 'Something went wrong while saving permissions. Please try again.')
+        return redirect('management:users_list')
 
     _notify(
         user=target,
@@ -1811,7 +1914,7 @@ def user_permissions(request, pk):
         notif_type='system',
     )
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'success': True, 'message': f'Permissions updated for {target.username}.'})
 
     messages.success(request, f'Permissions updated for {target.username}.')
@@ -1890,21 +1993,28 @@ def system_config_create(request):
     if request.method == 'POST':
         form = SystemConfigurationForm(request.POST)
         if form.is_valid():
-            config = form.save(commit=False)
-            config.updated_by = request.user
-            config.save()
-            
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='SystemConfiguration',
-                object_id=config.id,
-                description=f'Created configuration: {config.key}'
-            )
-            
-            messages.success(request, f'Configuration "{config.key}" created successfully.')
-            return redirect('management:system_config_list')
+            try:
+                with transaction.atomic():
+                    config = form.save(commit=False)
+                    config.updated_by = request.user
+                    config.save()
+
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='create',
+                        model_name='SystemConfiguration',
+                        object_id=config.id,
+                        description=f'Created configuration: {config.key}'
+                    )
+            except IntegrityError:
+                logger.exception('system_config_create: IntegrityError saving config')
+                messages.error(request, 'Could not save — that configuration key may already be in use.')
+            except Exception:
+                logger.exception('system_config_create: unexpected error saving config')
+                messages.error(request, 'Something went wrong while saving this configuration. Please try again.')
+            else:
+                messages.success(request, f'Configuration "{config.key}" created successfully.')
+                return redirect('management:system_config_list')
     else:
         form = SystemConfigurationForm()
     
@@ -1920,21 +2030,28 @@ def system_config_edit(request, pk):
     if request.method == 'POST':
         form = SystemConfigurationForm(request.POST, instance=config)
         if form.is_valid():
-            config = form.save(commit=False)
-            config.updated_by = request.user
-            config.save()
-            
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='SystemConfiguration',
-                object_id=config.id,
-                description=f'Updated configuration: {config.key}'
-            )
-            
-            messages.success(request, f'Configuration "{config.key}" updated successfully.')
-            return redirect('management:system_config_list')
+            try:
+                with transaction.atomic():
+                    config = form.save(commit=False)
+                    config.updated_by = request.user
+                    config.save()
+
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='SystemConfiguration',
+                        object_id=config.id,
+                        description=f'Updated configuration: {config.key}'
+                    )
+            except IntegrityError:
+                logger.exception('system_config_edit: IntegrityError saving config pk=%s', pk)
+                messages.error(request, 'Could not save — that configuration key may already be in use.')
+            except Exception:
+                logger.exception('system_config_edit: unexpected error saving config pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this configuration. Please try again.')
+            else:
+                messages.success(request, f'Configuration "{config.key}" updated successfully.')
+                return redirect('management:system_config_list')
     else:
         form = SystemConfigurationForm(instance=config)
     
@@ -1952,17 +2069,21 @@ def system_config_delete(request, pk):
     
     if request.method == 'POST':
         config_key = config.key
-        
-        # Create audit log before deletion
-        AuditLog.objects.create(
-            user=request.user,
-            action='delete',
-            model_name='SystemConfiguration',
-            object_id=config.id,
-            description=f'Deleted configuration: {config_key}'
-        )
-        
-        config.delete()
+        try:
+            with transaction.atomic():
+                # Create audit log before deletion
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='delete',
+                    model_name='SystemConfiguration',
+                    object_id=config.id,
+                    description=f'Deleted configuration: {config_key}'
+                )
+                config.delete()
+        except Exception:
+            logger.exception('system_config_delete: unexpected error deleting config pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this configuration. Please try again.')
+            return redirect('management:system_config_list')
         messages.success(request, f'Configuration "{config_key}" deleted successfully.')
         return redirect('management:system_config_list')
     
@@ -1974,33 +2095,42 @@ def system_config_delete(request, pk):
 def branding_config(request):
     """Manage branding configuration"""
     if request.method == 'POST':
-        form = BrandingConfigForm(request.POST, request.FILES)
-        if form.is_valid():
-            # Save each configuration
-            for key, value in form.cleaned_data.items():
-                if value:
-                    config, created = SystemConfiguration.objects.get_or_create(
-                        key=f'branding_{key}',
-                        defaults={
-                            'setting_type': 'text',
-                            'is_public': True,
-                            'updated_by': request.user
-                        }
-                    )
-                    config.value = str(value)
-                    config.updated_by = request.user
-                    config.save()
-            
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='SystemConfiguration',
-                description='Updated branding configuration'
-            )
-            
-            messages.success(request, 'Branding settings updated successfully.')
-            return redirect('management:branding_config')
+        try:
+            form = BrandingConfigForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        # Save each configuration
+                        for key, value in form.cleaned_data.items():
+                            if value:
+                                config, created = SystemConfiguration.objects.get_or_create(
+                                    key=f'branding_{key}',
+                                    defaults={
+                                        'setting_type': 'text',
+                                        'is_public': True,
+                                        'updated_by': request.user
+                                    }
+                                )
+                                config.value = str(value)
+                                config.updated_by = request.user
+                                config.save()
+
+                        AuditLog.objects.create(
+                            user=request.user,
+                            action='update',
+                            model_name='SystemConfiguration',
+                            description='Updated branding configuration'
+                        )
+                except Exception:
+                    logger.exception('branding_config: unexpected error saving branding settings')
+                    messages.error(request, 'Something went wrong while saving these settings. Please try again.')
+                else:
+                    messages.success(request, 'Branding settings updated successfully.')
+                    return redirect('management:branding_config')
+        except SuspiciousOperation:
+            logger.warning('branding_config: oversized/suspicious upload')
+            messages.error(request, 'Your changes could not be saved — the file you uploaded was too large. Please use a smaller file and try again.')
+            form = BrandingConfigForm()
     else:
         # Load existing values
         initial_data = {}
@@ -2176,30 +2306,34 @@ def notification_config(request):
     if request.method == 'POST':
         form = NotificationConfigForm(request.POST)
         if form.is_valid():
-            # Save notification configuration
-            for key, value in form.cleaned_data.items():
-                config, created = SystemConfiguration.objects.get_or_create(
-                    key=f'notification_{key}',
-                    defaults={
-                        'setting_type': 'boolean' if isinstance(value, bool) else 'text',
-                        'is_public': False,
-                        'updated_by': request.user
-                    }
-                )
-                config.value = str(value)
-                config.updated_by = request.user
-                config.save()
-            
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='SystemConfiguration',
-                description='Updated notification configuration'
-            )
-            
-            messages.success(request, 'Notification settings updated successfully.')
-            return redirect('management:notification_config')
+            try:
+                with transaction.atomic():
+                    # Save notification configuration
+                    for key, value in form.cleaned_data.items():
+                        config, created = SystemConfiguration.objects.get_or_create(
+                            key=f'notification_{key}',
+                            defaults={
+                                'setting_type': 'boolean' if isinstance(value, bool) else 'text',
+                                'is_public': False,
+                                'updated_by': request.user
+                            }
+                        )
+                        config.value = str(value)
+                        config.updated_by = request.user
+                        config.save()
+
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='SystemConfiguration',
+                        description='Updated notification configuration'
+                    )
+            except Exception:
+                logger.exception('notification_config: unexpected error saving notification settings')
+                messages.error(request, 'Something went wrong while saving these settings. Please try again.')
+            else:
+                messages.success(request, 'Notification settings updated successfully.')
+                return redirect('management:notification_config')
     else:
         # Load existing values
         initial_data = {}
@@ -2576,17 +2710,23 @@ def lms_course_delete(request, pk):
             return redirect('management:lms_courses_list')
  
         course_title = course.title
-        AuditLog.objects.create(
-            user=request.user,
-            action='delete',
-            model_name='LMSCourse',
-            object_id=course.id,
-            description=(
-                f'Deleted LMS course: {course_title}'
-                + (f' (had {_pluralise(enrollments_count, "enrollment")})' if enrollments_count else '')
-            ),
-        )
-        course.delete()
+        try:
+            with transaction.atomic():
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='delete',
+                    model_name='LMSCourse',
+                    object_id=course.id,
+                    description=(
+                        f'Deleted LMS course: {course_title}'
+                        + (f' (had {_pluralise(enrollments_count, "enrollment")})' if enrollments_count else '')
+                    ),
+                )
+                course.delete()
+        except Exception:
+            logger.exception('lms_course_delete: unexpected error deleting course pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this course. Please try again.')
+            return redirect('management:lms_courses_list')
         messages.success(request, f'LMS course "{course_title}" deleted successfully.')
  
     return redirect('management:lms_courses_list')
@@ -2796,53 +2936,58 @@ def broadcast_create(request):
     if request.method == 'POST':
         form = BroadcastMessageForm(request.POST)
         if form.is_valid():
-            broadcast = form.save(commit=False)
-            broadcast.created_by = request.user
-            
-            # Collect filter values
-            filter_values = {}
-            filter_type = form.cleaned_data['filter_type']
-            
-            if filter_type == 'faculty':
-                filter_values['faculties'] = list(
-                    form.cleaned_data['faculties']
-                    .values_list('id', flat=True)
+            try:
+                with transaction.atomic():
+                    broadcast = form.save(commit=False)
+                    broadcast.created_by = request.user
+
+                    # Collect filter values
+                    filter_values = {}
+                    filter_type = form.cleaned_data['filter_type']
+
+                    if filter_type == 'faculty':
+                        filter_values['faculties'] = list(
+                            form.cleaned_data['faculties']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'course':
+                        filter_values['courses'] = list(
+                            form.cleaned_data['courses']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'lms_course':
+                        filter_values['lms_courses'] = list(
+                            form.cleaned_data['lms_courses']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'role':
+                        filter_values['roles'] = form.cleaned_data['roles']
+                    elif filter_type == 'application_status':
+                        filter_values['application_statuses'] = (
+                            form.cleaned_data['application_statuses']
+                        )
+                    elif filter_type == 'enrollment_status':
+                        filter_values['enrollment_statuses'] = (
+                            form.cleaned_data['enrollment_statuses']
+                        )
+
+                    broadcast.filter_values = filter_values
+
+                    # Get recipient emails
+                    emails = get_recipient_emails(filter_type, filter_values)
+                    broadcast.recipient_emails = emails
+                    broadcast.recipient_count = len(emails)
+
+                    broadcast.save()
+            except Exception:
+                logger.exception('broadcast_create: unexpected error saving broadcast')
+                messages.error(request, 'Something went wrong while saving this broadcast. Please try again.')
+            else:
+                messages.success(
+                    request,
+                    f'Broadcast created! {len(emails)} recipients identified.'
                 )
-            elif filter_type == 'course':
-                filter_values['courses'] = list(
-                    form.cleaned_data['courses']
-                    .values_list('id', flat=True)
-                )
-            elif filter_type == 'lms_course':
-                filter_values['lms_courses'] = list(
-                    form.cleaned_data['lms_courses']
-                    .values_list('id', flat=True)
-                )
-            elif filter_type == 'role':
-                filter_values['roles'] = form.cleaned_data['roles']
-            elif filter_type == 'application_status':
-                filter_values['application_statuses'] = (
-                    form.cleaned_data['application_statuses']
-                )
-            elif filter_type == 'enrollment_status':
-                filter_values['enrollment_statuses'] = (
-                    form.cleaned_data['enrollment_statuses']
-                )
-            
-            broadcast.filter_values = filter_values
-            
-            # Get recipient emails
-            emails = get_recipient_emails(filter_type, filter_values)
-            broadcast.recipient_emails = emails
-            broadcast.recipient_count = len(emails)
-            
-            broadcast.save()
-            
-            messages.success(
-                request, 
-                f'Broadcast created! {len(emails)} recipients identified.'
-            )
-            return redirect('management:broadcast_center')
+                return redirect('management:broadcast_center')
     else:
         form = BroadcastMessageForm()
     
@@ -2880,52 +3025,57 @@ def broadcast_edit(request, slug):
     if request.method == 'POST':
         form = BroadcastMessageForm(request.POST, instance=broadcast)
         if form.is_valid():
-            broadcast = form.save(commit=False)
-            
-            # Update filter values
-            filter_values = {}
-            filter_type = form.cleaned_data['filter_type']
-            
-            if filter_type == 'faculty':
-                filter_values['faculties'] = list(
-                    form.cleaned_data['faculties']
-                    .values_list('id', flat=True)
+            try:
+                with transaction.atomic():
+                    broadcast = form.save(commit=False)
+
+                    # Update filter values
+                    filter_values = {}
+                    filter_type = form.cleaned_data['filter_type']
+
+                    if filter_type == 'faculty':
+                        filter_values['faculties'] = list(
+                            form.cleaned_data['faculties']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'course':
+                        filter_values['courses'] = list(
+                            form.cleaned_data['courses']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'lms_course':
+                        filter_values['lms_courses'] = list(
+                            form.cleaned_data['lms_courses']
+                            .values_list('id', flat=True)
+                        )
+                    elif filter_type == 'role':
+                        filter_values['roles'] = form.cleaned_data['roles']
+                    elif filter_type == 'application_status':
+                        filter_values['application_statuses'] = (
+                            form.cleaned_data['application_statuses']
+                        )
+                    elif filter_type == 'enrollment_status':
+                        filter_values['enrollment_statuses'] = (
+                            form.cleaned_data['enrollment_statuses']
+                        )
+
+                    broadcast.filter_values = filter_values
+
+                    # Recalculate recipient emails
+                    emails = get_recipient_emails(filter_type, filter_values)
+                    broadcast.recipient_emails = emails
+                    broadcast.recipient_count = len(emails)
+
+                    broadcast.save()
+            except Exception:
+                logger.exception('broadcast_edit: unexpected error saving broadcast slug=%s', slug)
+                messages.error(request, 'Something went wrong while saving this broadcast. Please try again.')
+            else:
+                messages.success(
+                    request,
+                    f'Broadcast updated! {len(emails)} recipients identified.'
                 )
-            elif filter_type == 'course':
-                filter_values['courses'] = list(
-                    form.cleaned_data['courses']
-                    .values_list('id', flat=True)
-                )
-            elif filter_type == 'lms_course':
-                filter_values['lms_courses'] = list(
-                    form.cleaned_data['lms_courses']
-                    .values_list('id', flat=True)
-                )
-            elif filter_type == 'role':
-                filter_values['roles'] = form.cleaned_data['roles']
-            elif filter_type == 'application_status':
-                filter_values['application_statuses'] = (
-                    form.cleaned_data['application_statuses']
-                )
-            elif filter_type == 'enrollment_status':
-                filter_values['enrollment_statuses'] = (
-                    form.cleaned_data['enrollment_statuses']
-                )
-            
-            broadcast.filter_values = filter_values
-            
-            # Recalculate recipient emails
-            emails = get_recipient_emails(filter_type, filter_values)
-            broadcast.recipient_emails = emails
-            broadcast.recipient_count = len(emails)
-            
-            broadcast.save()
-            
-            messages.success(
-                request, 
-                f'Broadcast updated! {len(emails)} recipients identified.'
-            )
-            return redirect('management:broadcast_center')
+                return redirect('management:broadcast_center')
     else:
         # Pre-populate form with existing data
         initial_data = {
@@ -2989,16 +3139,23 @@ def broadcast_send(request, slug):
     # in one transaction, so a double-click/retry racing this same request
     # sees status already 'sending' (or 'sent') and bails out instead of
     # spawning a second background thread that re-emails everyone.
-    with transaction.atomic():
-        broadcast = get_object_or_404(
-            BroadcastMessage.objects.select_for_update(), slug=slug
-        )
-        if broadcast.status in ('sent', 'sending'):
-            messages.warning(request, 'This broadcast is already sent or in progress.')
-            return redirect('management:broadcast_center')
+    try:
+        with transaction.atomic():
+            broadcast = get_object_or_404(
+                BroadcastMessage.objects.select_for_update(), slug=slug
+            )
+            if broadcast.status in ('sent', 'sending'):
+                messages.warning(request, 'This broadcast is already sent or in progress.')
+                return redirect('management:broadcast_center')
 
-        broadcast.status = 'sending'
-        broadcast.save(update_fields=['status'])
+            broadcast.status = 'sending'
+            broadcast.save(update_fields=['status'])
+    except Http404:
+        raise
+    except Exception:
+        logger.exception('broadcast_send: unexpected error claiming broadcast slug=%s', slug)
+        messages.error(request, 'Something went wrong while starting this broadcast. Please try again.')
+        return redirect('management:broadcast_center')
 
     # Synchronous, not backgrounded — on Passenger/shared hosting a daemon
     # thread can be killed mid-send when the worker process is recycled,
@@ -3049,7 +3206,11 @@ def broadcast_send(request, slug):
             request,
             f'Broadcast sent to {broadcast.recipient_count} recipients.'
         )
-    broadcast.save(update_fields=['status', 'sent_at', 'error_message'])
+    try:
+        broadcast.save(update_fields=['status', 'sent_at', 'error_message'])
+    except Exception:
+        logger.exception('broadcast_send: unexpected error saving final status for broadcast slug=%s', slug)
+        messages.error(request, 'The broadcast was sent, but its status could not be saved. Please contact support.')
 
     return redirect('management:broadcast_center')
 
@@ -3061,9 +3222,13 @@ def broadcast_delete(request, slug):
     broadcast = get_object_or_404(BroadcastMessage, slug=slug)
 
     if request.method == 'POST':
-        broadcast.delete()
-        messages.success(request, 'Broadcast deleted successfully.')
-    
+        try:
+            broadcast.delete()
+            messages.success(request, 'Broadcast deleted successfully.')
+        except Exception:
+            logger.exception('broadcast_delete: unexpected error deleting broadcast slug=%s', slug)
+            messages.error(request, 'Something went wrong while deleting this broadcast. Please try again.')
+
     return redirect('management:broadcast_center')
 
 
@@ -3151,25 +3316,30 @@ def approve_department(request, pk):
             )
             return redirect('management:application_detail', application_id=application.application_id)
         
-        application.department_approved = True
-        application.department_approved_at = timezone.now()
-        application.department_approved_by = request.user
-        application.save()
-        
-        # Send notification to student
-        send_department_approval_email(application)
-        
-        messages.success(
-            request,
-            f'Department approval granted for {application.admission_number}'
-        )
-        if application.user:
-            _notify(
-                user=application.user,
-                title='Department Approval Granted',
-                message=f'Your admission ({application.admission_number}) has received department approval. You now have full portal access.',
-                notif_type='enrollment',
-                link='/dashboard/',
+        try:
+            application.department_approved = True
+            application.department_approved_at = timezone.now()
+            application.department_approved_by = request.user
+            application.save()
+
+            # Send notification to student
+            send_department_approval_email(application)
+
+            if application.user:
+                _notify(
+                    user=application.user,
+                    title='Department Approval Granted',
+                    message=f'Your admission ({application.admission_number}) has received department approval. You now have full portal access.',
+                    notif_type='enrollment',
+                    link='/dashboard/',
+                )
+        except Exception:
+            logger.exception('approve_department: unexpected error approving application pk=%s', pk)
+            messages.error(request, 'Something went wrong while granting approval. Please try again.')
+        else:
+            messages.success(
+                request,
+                f'Department approval granted for {application.admission_number}'
             )
 
         return redirect('management:application_detail', application_id=application.application_id)
@@ -3336,9 +3506,18 @@ def department_create(request):
 
     form = DepartmentForm(request.POST)
     if form.is_valid():
-        form.save()
-        messages.success(request, 'Department created successfully.')
-        return redirect('management:departments_list')
+        try:
+            with transaction.atomic():
+                form.save()
+        except IntegrityError:
+            logger.exception('department_create: IntegrityError saving department')
+            messages.error(request, 'Could not save — that department code may already be in use.')
+        except Exception:
+            logger.exception('department_create: unexpected error saving department')
+            messages.error(request, 'Something went wrong while saving this department. Please try again.')
+        else:
+            messages.success(request, 'Department created successfully.')
+            return redirect('management:departments_list')
 
     return render(request, 'management/_department_form_fields.html', {'form': form})
 
@@ -3360,9 +3539,18 @@ def department_edit(request, pk):
 
         form = DepartmentForm(request.POST, instance=dept)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Department updated.')
-            return redirect('management:departments_list')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('department_edit: IntegrityError saving department pk=%s', pk)
+                messages.error(request, 'Could not save — that department code may already be in use.')
+            except Exception:
+                logger.exception('department_edit: unexpected error saving department pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this department. Please try again.')
+            else:
+                messages.success(request, 'Department updated.')
+                return redirect('management:departments_list')
     else:
         form = DepartmentForm(instance=dept)
     return render(request, 'management/_department_form_fields.html', {'form': form, 'department': dept})
@@ -3387,8 +3575,12 @@ def department_delete(request, pk):
             return redirect('management:departments_list')
 
         dept_name = dept.name
-        dept.delete()
-        messages.success(request, f'Department "{dept_name}" deleted successfully.')
+        try:
+            dept.delete()
+            messages.success(request, f'Department "{dept_name}" deleted successfully.')
+        except Exception:
+            logger.exception('department_delete: unexpected error deleting department pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this department. Please try again.')
         return redirect('management:departments_list')
 
     # No dedicated confirm page any more — deletion is confirmed via the
@@ -3542,15 +3734,31 @@ def program_create(request):
 
     form = ProgramForm(request.POST, request.FILES)
     if form.is_valid():
-        with transaction.atomic():
-            program = form.save()
-            # Session-specific caps need a real program PK, which only
-            # exists after this save.
-            cap_errors = _sync_program_session_credit_caps(request, program)
-        messages.success(request, 'Program created.')
-        for err in cap_errors:
-            messages.error(request, err)
-        return redirect('management:programs_list')
+        try:
+            with transaction.atomic():
+                program = form.save()
+                # Session-specific caps need a real program PK, which only
+                # exists after this save.
+                cap_errors = _sync_program_session_credit_caps(request, program)
+        except IntegrityError:
+            logger.exception('program_create: IntegrityError saving program')
+            messages.error(
+                request,
+                'Could not save this program — that program code may already be '
+                'in use by another program. Please use a different code.'
+            )
+        except Exception:
+            logger.exception('program_create: unexpected error saving program')
+            messages.error(
+                request,
+                'Something went wrong while saving this program. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+        else:
+            messages.success(request, 'Program created.')
+            for err in cap_errors:
+                messages.error(request, err)
+            return redirect('management:programs_list')
 
     return render(request, 'management/_program_form_fields.html', {
         'form': form,
@@ -3670,8 +3878,12 @@ def program_delete(request, pk):
             return redirect('management:programs_list')
 
         program_name = program.name
-        program.delete()
-        messages.success(request, f'Program "{program_name}" deleted successfully.')
+        try:
+            program.delete()
+            messages.success(request, f'Program "{program_name}" deleted successfully.')
+        except Exception:
+            logger.exception('program_delete: unexpected error deleting program pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this program. Please try again.')
         return redirect('management:programs_list')
 
     # No dedicated confirm page any more — deletion is confirmed via the
@@ -3701,7 +3913,21 @@ def academic_sessions_list(request):
                 return denied('You do not have permission to create academic sessions.')
             form = AcademicSessionForm(request.POST)
             if form.is_valid():
-                form.save()
+                try:
+                    with transaction.atomic():
+                        form.save()
+                except IntegrityError:
+                    logger.exception('academic_sessions_list: IntegrityError creating session')
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': ['A session with these details already exists.']}}, status=400)
+                    messages.error(request, 'Could not save — a session with these details may already exist.')
+                    return redirect('management:academic_sessions_list')
+                except Exception:
+                    logger.exception('academic_sessions_list: unexpected error creating session')
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': ['Something went wrong. Please try again.']}}, status=500)
+                    messages.error(request, 'Something went wrong while saving this session. Please try again.')
+                    return redirect('management:academic_sessions_list')
                 if is_ajax:
                     return JsonResponse({'success': True})
                 messages.success(request, 'Academic session created successfully.')
@@ -3717,7 +3943,21 @@ def academic_sessions_list(request):
             session = get_object_or_404(AcademicSession, pk=session_id)
             form = AcademicSessionForm(request.POST, instance=session)
             if form.is_valid():
-                form.save()
+                try:
+                    with transaction.atomic():
+                        form.save()
+                except IntegrityError:
+                    logger.exception('academic_sessions_list: IntegrityError updating session_id=%s', session_id)
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': ['A session with these details already exists.']}}, status=400)
+                    messages.error(request, 'Could not save — a session with these details may already exist.')
+                    return redirect('management:academic_sessions_list')
+                except Exception:
+                    logger.exception('academic_sessions_list: unexpected error updating session_id=%s', session_id)
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': ['Something went wrong. Please try again.']}}, status=500)
+                    messages.error(request, 'Something went wrong while saving this session. Please try again.')
+                    return redirect('management:academic_sessions_list')
                 if is_ajax:
                     return JsonResponse({'success': True})
                 messages.success(request, 'Academic session updated.')
@@ -4070,8 +4310,13 @@ def carry_over_list(request):
 
         record_id = request.POST.get('record_id')
         record = get_object_or_404(CourseCarryOver, pk=record_id)
-        record.is_cleared = True
-        record.save(update_fields=['is_cleared', 'updated_at'])
+        try:
+            record.is_cleared = True
+            record.save(update_fields=['is_cleared', 'updated_at'])
+        except Exception:
+            logger.exception('carry_over_list: unexpected error saving record_id=%s', record_id)
+            messages.error(request, 'Something went wrong while saving this record. Please try again.')
+            return redirect('management:carry_over_list')
         messages.success(request, f'Marked {record.course.code} cleared for {record.student.username}.')
         return redirect('management:carry_over_list')
 
@@ -4145,16 +4390,21 @@ def results_publish(request):
             messages.error(request, 'Invalid action.')
             return redirect('management:results_publish')
 
-        with transaction.atomic():
-            count = CourseGrade.publish_results(session, term=term, program=program, status=status)
-            scope = f'{session}' + (f' — {term.title()} term' if term else ' — no term recorded') + (f' ({program.name})' if program else '')
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='CourseGrade',
-                object_id=f'session={session.pk}|term={term or "(blank)"}|program={program.pk if program else "*"}',
-                description=f'Bulk-set result_status={status!r} on {count} CourseGrade row(s) for {scope}.',
-            )
+        try:
+            with transaction.atomic():
+                count = CourseGrade.publish_results(session, term=term, program=program, status=status)
+                scope = f'{session}' + (f' — {term.title()} term' if term else ' — no term recorded') + (f' ({program.name})' if program else '')
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    model_name='CourseGrade',
+                    object_id=f'session={session.pk}|term={term or "(blank)"}|program={program.pk if program else "*"}',
+                    description=f'Bulk-set result_status={status!r} on {count} CourseGrade row(s) for {scope}.',
+                )
+        except Exception:
+            logger.exception('results_publish: unexpected error publishing results for session pk=%s', session.pk)
+            messages.error(request, 'Something went wrong while saving these results. Please try again.')
+            return redirect('management:results_publish')
 
         messages.success(request, f'{count} result(s) marked "{status}" for {scope}.')
         return redirect('management:results_publish')
@@ -4236,20 +4486,25 @@ def results_publish_detail(request, session_id):
 
         valid_statuses = dict(CourseGrade.RESULT_STATUS_CHOICES)
         changed = 0
-        with transaction.atomic():
-            for grade in grades_qs:
-                posted = request.POST.get(f'status_{grade.pk}')
-                if posted in valid_statuses and posted != grade.result_status:
-                    CourseGrade.objects.filter(pk=grade.pk).update(result_status=posted)
-                    changed += 1
-            if changed:
-                AuditLog.objects.create(
-                    user=request.user,
-                    action='update',
-                    model_name='CourseGrade',
-                    object_id=f'session={session.pk}|term={term or "*"}',
-                    description=f'Individually overrode result_status on {changed} CourseGrade row(s) in {session}.',
-                )
+        try:
+            with transaction.atomic():
+                for grade in grades_qs:
+                    posted = request.POST.get(f'status_{grade.pk}')
+                    if posted in valid_statuses and posted != grade.result_status:
+                        CourseGrade.objects.filter(pk=grade.pk).update(result_status=posted)
+                        changed += 1
+                if changed:
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='CourseGrade',
+                        object_id=f'session={session.pk}|term={term or "*"}',
+                        description=f'Individually overrode result_status on {changed} CourseGrade row(s) in {session}.',
+                    )
+        except Exception:
+            logger.exception('results_publish_detail: unexpected error saving overrides for session pk=%s', session.pk)
+            messages.error(request, 'Something went wrong while saving these changes. Please try again.')
+            return redirect(redirect_url)
 
         if changed:
             messages.success(request, f'Updated {changed} individual result(s).')
@@ -4288,7 +4543,21 @@ def courses_list(request):
 
             form = CourseForm(request.POST)
             if form.is_valid():
-                form.save()
+                try:
+                    with transaction.atomic():
+                        form.save()
+                except IntegrityError:
+                    logger.exception('courses_list: IntegrityError creating course')
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Could not save — that course code may already be in use.'}]}}, status=400)
+                    messages.error(request, 'Could not save — that course code may already be in use.')
+                    return redirect('management:courses_list')
+                except Exception:
+                    logger.exception('courses_list: unexpected error creating course')
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong. Please try again.'}]}}, status=500)
+                    messages.error(request, 'Something went wrong while saving this course. Please try again.')
+                    return redirect('management:courses_list')
                 if is_ajax:
                     return JsonResponse({'success': True})
                 messages.success(request, 'Course created successfully.')
@@ -4311,7 +4580,21 @@ def courses_list(request):
             course    = get_object_or_404(Course, pk=course_id)
             form      = CourseForm(request.POST, instance=course)
             if form.is_valid():
-                form.save()
+                try:
+                    with transaction.atomic():
+                        form.save()
+                except IntegrityError:
+                    logger.exception('courses_list: IntegrityError updating course_id=%s', course_id)
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Could not save — that course code may already be in use.'}]}}, status=400)
+                    messages.error(request, 'Could not save — that course code may already be in use.')
+                    return redirect('management:courses_list')
+                except Exception:
+                    logger.exception('courses_list: unexpected error updating course_id=%s', course_id)
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong. Please try again.'}]}}, status=500)
+                    messages.error(request, 'Something went wrong while saving this course. Please try again.')
+                    return redirect('management:courses_list')
                 if is_ajax:
                     return JsonResponse({'success': True})
                 messages.success(request, f'Course "{course.code}" updated successfully.')
@@ -4344,7 +4627,12 @@ def courses_list(request):
                 return redirect('management:courses_list')
 
             code = course.code
-            course.delete()
+            try:
+                course.delete()
+            except Exception:
+                logger.exception('courses_list: unexpected error deleting course_id=%s', course_id)
+                messages.error(request, 'Something went wrong while deleting this course. Please try again.')
+                return redirect('management:courses_list')
             messages.success(request, f'Course "{code}" deleted successfully.')
  
         return redirect('management:courses_list')
@@ -4450,12 +4738,27 @@ def intake_create(request):
         formset = IntakeCreateFormSet(request.POST, queryset=CourseIntake.objects.none(), prefix='intake')
         if formset.is_valid():
             created = 0
-            with transaction.atomic():
-                for form in formset:
-                    if not form.has_changed():
-                        continue
-                    form.save()
-                    created += 1
+            try:
+                with transaction.atomic():
+                    for form in formset:
+                        if not form.has_changed():
+                            continue
+                        form.save()
+                        created += 1
+            except IntegrityError:
+                logger.exception('intake_create: IntegrityError saving intakes')
+                msg = 'Could not save — one of these intakes may already exist.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'non_form_errors': [msg]}, status=400)
+                messages.error(request, msg)
+                return redirect('management:intakes_list')
+            except Exception:
+                logger.exception('intake_create: unexpected error saving intakes')
+                msg = 'Something went wrong while saving. Please try again.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'non_form_errors': [msg]}, status=500)
+                messages.error(request, msg)
+                return redirect('management:intakes_list')
             if created:
                 messages.success(request, f'{created} intake{"s" if created != 1 else ""} created.')
                 if is_ajax:
@@ -4509,7 +4812,23 @@ def intake_edit(request, pk):
 
         form = CourseIntakeForm(request.POST, instance=intake)
         if form.is_valid():
-            form.save()
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('intake_edit: IntegrityError saving intake pk=%s', pk)
+                msg = 'Could not save — please check the details and try again.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'errors': {'__all__': [msg]}}, status=400)
+                messages.error(request, msg)
+                return redirect('management:intakes_list')
+            except Exception:
+                logger.exception('intake_edit: unexpected error saving intake pk=%s', pk)
+                msg = 'Something went wrong while saving. Please try again.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'errors': {'__all__': [msg]}}, status=500)
+                messages.error(request, msg)
+                return redirect('management:intakes_list')
             messages.success(request, 'Intake updated.')
             if is_ajax:
                 return JsonResponse({'success': True})
@@ -4562,8 +4881,12 @@ def intake_delete(request, pk):
             return redirect('management:intakes_list')
 
         intake_name = str(intake)
-        intake.delete()
-        messages.success(request, f'Intake "{intake_name}" deleted.')
+        try:
+            intake.delete()
+            messages.success(request, f'Intake "{intake_name}" deleted.')
+        except Exception:
+            logger.exception('intake_delete: unexpected error deleting intake pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this intake. Please try again.')
     return redirect('management:intakes_list')
 
 
@@ -4591,16 +4914,25 @@ def course_category_create(request):
     if request.method == 'POST':
         form = CourseCategoryForm(request.POST)
         if form.is_valid():
-            category = form.save()
-            AuditLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='CourseCategory',
-                object_id=category.id,
-                description=f'Created course category: {category.name}'
-            )
-            messages.success(request, f'Category "{category.name}" created successfully.')
-            return redirect('management:course_categories_list')
+            try:
+                with transaction.atomic():
+                    category = form.save()
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='create',
+                        model_name='CourseCategory',
+                        object_id=category.id,
+                        description=f'Created course category: {category.name}'
+                    )
+            except IntegrityError:
+                logger.exception('course_category_create: IntegrityError saving category')
+                messages.error(request, 'Could not save this category — that name may already be in use.')
+            except Exception:
+                logger.exception('course_category_create: unexpected error saving category')
+                messages.error(request, 'Something went wrong while saving this category. Please try again.')
+            else:
+                messages.success(request, f'Category "{category.name}" created successfully.')
+                return redirect('management:course_categories_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -4618,16 +4950,25 @@ def course_category_edit(request, pk):
     if request.method == 'POST':
         form = CourseCategoryForm(request.POST, instance=category)
         if form.is_valid():
-            category = form.save()
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='CourseCategory',
-                object_id=category.id,
-                description=f'Updated course category: {category.name}'
-            )
-            messages.success(request, f'Category "{category.name}" updated successfully.')
-            return redirect('management:course_categories_list')
+            try:
+                with transaction.atomic():
+                    category = form.save()
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='CourseCategory',
+                        object_id=category.id,
+                        description=f'Updated course category: {category.name}'
+                    )
+            except IntegrityError:
+                logger.exception('course_category_edit: IntegrityError saving category pk=%s', pk)
+                messages.error(request, 'Could not save this category — that name may already be in use.')
+            except Exception:
+                logger.exception('course_category_edit: unexpected error saving category pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this category. Please try again.')
+            else:
+                messages.success(request, f'Category "{category.name}" updated successfully.')
+                return redirect('management:course_categories_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -4741,9 +5082,13 @@ def contact_message_detail(request, pk):
 def contact_message_mark_read(request, pk):
     if request.method == 'POST':
         msg = get_object_or_404(ContactMessage, pk=pk)
-        msg.is_read = True
-        msg.save(update_fields=['is_read'])
-        messages.success(request, 'Marked as read.')
+        try:
+            msg.is_read = True
+            msg.save(update_fields=['is_read'])
+            messages.success(request, 'Marked as read.')
+        except Exception:
+            logger.exception('contact_message_mark_read: unexpected error for pk=%s', pk)
+            messages.error(request, 'Something went wrong. Please try again.')
     return redirect('management:contact_message_detail', pk=pk)
 
 
@@ -4770,11 +5115,16 @@ def contact_message_respond(request, pk):
                 logger.exception('Failed to send contact-message response to %s (msg id=%s)', msg.email, msg.pk)
                 email_sent = False
 
-            msg.responded = True
-            msg.responded_at = timezone.now()
-            msg.responded_by = request.user
-            msg.is_read = True
-            msg.save(update_fields=['responded', 'responded_at', 'responded_by', 'is_read'])
+            try:
+                msg.responded = True
+                msg.responded_at = timezone.now()
+                msg.responded_by = request.user
+                msg.is_read = True
+                msg.save(update_fields=['responded', 'responded_at', 'responded_by', 'is_read'])
+            except Exception:
+                logger.exception('contact_message_respond: unexpected error saving response for msg id=%s', msg.pk)
+                messages.error(request, 'Something went wrong while saving your response. Please try again.')
+                return redirect('management:contact_message_detail', pk=pk)
 
             if email_sent:
                 messages.success(request, f'Response sent to {msg.email}.')
@@ -4827,51 +5177,66 @@ def announcement_create(request):
     if request.method == 'POST':
         form = AnnouncementForm(request.POST)
         if form.is_valid():
-            ann = form.save(commit=False)
-            ann.created_by = request.user
-            ann.save()
+            try:
+                with transaction.atomic():
+                    ann = form.save(commit=False)
+                    ann.created_by = request.user
+                    ann.save()
+            except IntegrityError:
+                logger.exception('announcement_create: IntegrityError saving announcement')
+                messages.error(request, 'Could not save — please check the details and try again.')
+                return render(request, 'management/announcement_form.html', {'form': form})
+            except Exception:
+                logger.exception('announcement_create: unexpected error saving announcement')
+                messages.error(request, 'Something went wrong while saving this announcement. Please try again.')
+                return render(request, 'management/announcement_form.html', {'form': form})
             messages.success(request, 'Announcement created.')
             # Notify users based on announcement type. Uses bulk_create instead of
             # one _notify() call per recipient (each of which is an INSERT + a
             # prune-query) — fan-out to "all active users" could otherwise be
-            # thousands of queries in the request/response cycle.
-            if ann.announcement_type == 'system':
-                recipients = User.objects.filter(is_active=True).exclude(id=request.user.id)
-                Notification.objects.bulk_create([
-                    Notification(
-                        user=u, notification_type='announcement',
-                        title=f'Announcement: {ann.title}',
-                        message=ann.content[:200], link='/',
+            # thousands of queries in the request/response cycle. Non-fatal if
+            # it fails: the announcement itself is already saved above.
+            try:
+                if ann.announcement_type == 'system':
+                    recipients = User.objects.filter(is_active=True).exclude(id=request.user.id)
+                    Notification.objects.bulk_create([
+                        Notification(
+                            user=u, notification_type='announcement',
+                            title=f'Announcement: {ann.title}',
+                            message=ann.content[:200], link='/',
+                        )
+                        for u in recipients
+                    ])
+                elif ann.announcement_type == 'course' and ann.course:
+                    # Notify only students enrolled in this specific course
+                    enrolled_users = User.objects.filter(
+                        enrollments__course=ann.course,
+                        enrollments__status='active',
+                        is_active=True,
+                    ).exclude(id=request.user.id).distinct()
+                    Notification.objects.bulk_create([
+                        Notification(
+                            user=u, notification_type='announcement',
+                            title=f'Course Announcement: {ann.title}',
+                            message=ann.content[:200], link=f'/courses/{ann.course.slug}/',
+                        )
+                        for u in enrolled_users
+                    ])
+                elif ann.announcement_type == 'category' and ann.category:
+                    # NOTE: LMSCourse has no live `category` FK (commented out in
+                    # eduweb/models.py) — there is currently no way to resolve
+                    # "students enrolled in a course under this category" at all.
+                    # Filtering on it crashes with FieldError. Until that FK is
+                    # wired up (flagged separately, see course_categories_list),
+                    # skip the fan-out rather than 500 the whole announcement.
+                    messages.warning(
+                        request,
+                        'Announcement saved, but category-targeted notifications were '
+                        'not sent: courses aren\'t linked to categories yet.'
                     )
-                    for u in recipients
-                ])
-            elif ann.announcement_type == 'course' and ann.course:
-                # Notify only students enrolled in this specific course
-                enrolled_users = User.objects.filter(
-                    enrollments__course=ann.course,
-                    enrollments__status='active',
-                    is_active=True,
-                ).exclude(id=request.user.id).distinct()
-                Notification.objects.bulk_create([
-                    Notification(
-                        user=u, notification_type='announcement',
-                        title=f'Course Announcement: {ann.title}',
-                        message=ann.content[:200], link=f'/courses/{ann.course.slug}/',
-                    )
-                    for u in enrolled_users
-                ])
-            elif ann.announcement_type == 'category' and ann.category:
-                # NOTE: LMSCourse has no live `category` FK (commented out in
-                # eduweb/models.py) — there is currently no way to resolve
-                # "students enrolled in a course under this category" at all.
-                # Filtering on it crashes with FieldError. Until that FK is
-                # wired up (flagged separately, see course_categories_list),
-                # skip the fan-out rather than 500 the whole announcement.
-                messages.warning(
-                    request,
-                    'Announcement saved, but category-targeted notifications were '
-                    'not sent: courses aren\'t linked to categories yet.'
-                )
+            except Exception:
+                logger.exception('announcement_create: unexpected error notifying recipients for announcement pk=%s', ann.pk)
+                messages.warning(request, 'Announcement saved, but notifications to recipients could not be sent.')
             return redirect('management:announcements_list')
     else:
         form = AnnouncementForm()
@@ -4886,9 +5251,18 @@ def announcement_edit(request, pk):
     if request.method == 'POST':
         form = AnnouncementForm(request.POST, instance=announcement)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Announcement updated.')
-            return redirect('management:announcements_list')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('announcement_edit: IntegrityError saving announcement pk=%s', pk)
+                messages.error(request, 'Could not save — please check the details and try again.')
+            except Exception:
+                logger.exception('announcement_edit: unexpected error saving announcement pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this announcement. Please try again.')
+            else:
+                messages.success(request, 'Announcement updated.')
+                return redirect('management:announcements_list')
     else:
         form = AnnouncementForm(instance=announcement)
     return render(request, 'management/announcement_form.html', {
@@ -4903,8 +5277,12 @@ def announcement_edit(request, pk):
 def announcement_delete(request, pk):
     announcement = get_object_or_404(Announcement, pk=pk)
     if request.method == 'POST':
-        announcement.delete()
-        messages.success(request, 'Announcement deleted.')
+        try:
+            announcement.delete()
+            messages.success(request, 'Announcement deleted.')
+        except Exception:
+            logger.exception('announcement_delete: unexpected error deleting announcement pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this announcement. Please try again.')
     return redirect('management:announcements_list')
 
 
@@ -4955,25 +5333,34 @@ def enrollment_create(request):
     if request.method == 'POST':
         form = EnrollmentForm(request.POST)
         if form.is_valid():
-            enrollment = form.save()
-            messages.success(request, 'Enrollment created.')
-            _notify(
-                user=enrollment.student,
-                title=f'Enrolled in {enrollment.course.title}',
-                message=f'You have been enrolled in "{enrollment.course.title}" by the administration.',
-                notif_type='enrollment',
-                link=f'/courses/{enrollment.course.slug}/',
-            )
-            # Notify course instructor
-            if enrollment.course.instructor:
+            try:
+                with transaction.atomic():
+                    enrollment = form.save()
+            except IntegrityError:
+                logger.exception('enrollment_create: IntegrityError saving enrollment')
+                messages.error(request, 'Could not save this enrollment — the student may already be enrolled.')
+            except Exception:
+                logger.exception('enrollment_create: unexpected error saving enrollment')
+                messages.error(request, 'Something went wrong while saving this enrollment. Please try again.')
+            else:
+                messages.success(request, 'Enrollment created.')
                 _notify(
-                    user=enrollment.course.instructor,
-                    title='New Student Enrolled',
-                    message=f'{enrollment.student.get_full_name() or enrollment.student.username} was enrolled in "{enrollment.course.title}" by admin.',
+                    user=enrollment.student,
+                    title=f'Enrolled in {enrollment.course.title}',
+                    message=f'You have been enrolled in "{enrollment.course.title}" by the administration.',
                     notif_type='enrollment',
-                    link=f'/instructor/courses/{enrollment.course.slug}/students/',
+                    link=f'/courses/{enrollment.course.slug}/',
                 )
-            return redirect('management:enrollments_list')
+                # Notify course instructor
+                if enrollment.course.instructor:
+                    _notify(
+                        user=enrollment.course.instructor,
+                        title='New Student Enrolled',
+                        message=f'{enrollment.student.get_full_name() or enrollment.student.username} was enrolled in "{enrollment.course.title}" by admin.',
+                        notif_type='enrollment',
+                        link=f'/instructor/courses/{enrollment.course.slug}/students/',
+                    )
+                return redirect('management:enrollments_list')
     else:
         form = EnrollmentForm()
     
@@ -4995,24 +5382,33 @@ def enrollment_edit(request, pk):
         old_status = enrollment.status
         form = EnrollmentForm(request.POST, instance=enrollment)
         if form.is_valid():
-            updated = form.save()
-            messages.success(request, 'Enrollment updated.')
-            # Notify student only if their enrollment status changed
-            if updated.status != old_status:
-                status_messages = {
-                    'active':    'Your enrollment has been reactivated.',
-                    'completed': 'Your enrollment has been marked as completed. Congratulations!',
-                    'dropped':   'Your enrollment has been dropped. Contact support if this was unexpected.',
-                    'suspended': 'Your enrollment has been suspended. Please contact the administration.',
-                }
-                _notify(
-                    user=updated.student,
-                    title=f'Enrollment Status Updated — {updated.course.title}',
-                    message=status_messages.get(updated.status, f'Your enrollment status changed to "{updated.get_status_display()}".'),
-                    notif_type='enrollment',
-                    link='/dashboard/',
-                )
-            return redirect('management:enrollments_list')
+            try:
+                with transaction.atomic():
+                    updated = form.save()
+            except IntegrityError:
+                logger.exception('enrollment_edit: IntegrityError saving enrollment pk=%s', pk)
+                messages.error(request, 'Could not save this enrollment — please check the details and try again.')
+            except Exception:
+                logger.exception('enrollment_edit: unexpected error saving enrollment pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this enrollment. Please try again.')
+            else:
+                messages.success(request, 'Enrollment updated.')
+                # Notify student only if their enrollment status changed
+                if updated.status != old_status:
+                    status_messages = {
+                        'active':    'Your enrollment has been reactivated.',
+                        'completed': 'Your enrollment has been marked as completed. Congratulations!',
+                        'dropped':   'Your enrollment has been dropped. Contact support if this was unexpected.',
+                        'suspended': 'Your enrollment has been suspended. Please contact the administration.',
+                    }
+                    _notify(
+                        user=updated.student,
+                        title=f'Enrollment Status Updated — {updated.course.title}',
+                        message=status_messages.get(updated.status, f'Your enrollment status changed to "{updated.get_status_display()}".'),
+                        notif_type='enrollment',
+                        link='/dashboard/',
+                    )
+                return redirect('management:enrollments_list')
     else:
         form = EnrollmentForm(instance=enrollment)
     
@@ -5044,15 +5440,19 @@ def enrollment_delete(request, pk):
             )
             return redirect('management:enrollments_list')
 
-        _notify(
-            user=enrollment.student,
-            title=f'Enrollment Removed — {enrollment.course.title}',
-            message=f'Your enrollment in "{enrollment.course.title}" has been removed by the administration. Please contact support if you believe this is an error.',
-            notif_type='enrollment',
-            link='/dashboard/',
-        )
-        enrollment.delete()
-        messages.success(request, 'Enrollment deleted.')
+        try:
+            _notify(
+                user=enrollment.student,
+                title=f'Enrollment Removed — {enrollment.course.title}',
+                message=f'Your enrollment in "{enrollment.course.title}" has been removed by the administration. Please contact support if you believe this is an error.',
+                notif_type='enrollment',
+                link='/dashboard/',
+            )
+            enrollment.delete()
+            messages.success(request, 'Enrollment deleted.')
+        except Exception:
+            logger.exception('enrollment_delete: unexpected error deleting enrollment pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this enrollment. Please try again.')
     return redirect('management:enrollments_list')
 
 # ===========================================================================
@@ -5099,15 +5499,24 @@ def certificate_create(request):
     if request.method == 'POST':
         form = CertificateForm(request.POST, request.FILES)
         if form.is_valid():
-            certificate = form.save()
-            messages.success(request, 'Certificate issued successfully.')
-            _notify(
-                user=certificate.student,
-                title='Certificate Issued',
-                message=f'Your certificate for "{certificate.course.title}" has been issued. Congratulations!',
-                notif_type='certificate',
-                link='/dashboard/',
-            )
+            try:
+                with transaction.atomic():
+                    certificate = form.save()
+            except IntegrityError:
+                logger.exception('certificate_create: IntegrityError saving certificate')
+                messages.error(request, 'Could not save this certificate — please check the details and try again.')
+            except Exception:
+                logger.exception('certificate_create: unexpected error saving certificate')
+                messages.error(request, 'Something went wrong while saving this certificate. Please try again.')
+            else:
+                messages.success(request, 'Certificate issued successfully.')
+                _notify(
+                    user=certificate.student,
+                    title='Certificate Issued',
+                    message=f'Your certificate for "{certificate.course.title}" has been issued. Congratulations!',
+                    notif_type='certificate',
+                    link='/dashboard/',
+                )
         else:
             # Surface the first meaningful error as a flash message
             first_error = next(
@@ -5127,8 +5536,17 @@ def certificate_edit(request, certificate_id):
     if request.method == 'POST':
         form = CertificateForm(request.POST, request.FILES, instance=certificate)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Certificate updated successfully.')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('certificate_edit: IntegrityError saving certificate_id=%s', certificate_id)
+                messages.error(request, 'Could not save this certificate — please check the details and try again.')
+            except Exception:
+                logger.exception('certificate_edit: unexpected error saving certificate_id=%s', certificate_id)
+                messages.error(request, 'Something went wrong while saving this certificate. Please try again.')
+            else:
+                messages.success(request, 'Certificate updated successfully.')
         else:
             first_error = next(
                 (e for field_errors in form.errors.values() for e in field_errors),
@@ -5148,8 +5566,12 @@ def certificate_delete(request, certificate_id):
             messages.error(request, 'You do not have permission to delete certificates.')
             return redirect('management:certificates_list')
 
-        certificate.delete()
-        messages.success(request, 'Certificate deleted.')
+        try:
+            certificate.delete()
+            messages.success(request, 'Certificate deleted.')
+        except Exception:
+            logger.exception('certificate_delete: unexpected error deleting certificate_id=%s', certificate_id)
+            messages.error(request, 'Something went wrong while deleting this certificate. Please try again.')
     return redirect('management:certificates_list')
 
 
@@ -5208,8 +5630,17 @@ def review_create(request):
     if request.method == 'POST':
         form = ReviewForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Review created.')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('review_create: IntegrityError saving review')
+                messages.error(request, 'Could not save this review — please check the details and try again.')
+            except Exception:
+                logger.exception('review_create: unexpected error saving review')
+                messages.error(request, 'Something went wrong while saving this review. Please try again.')
+            else:
+                messages.success(request, 'Review created.')
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -5228,8 +5659,17 @@ def review_edit(request, pk):
     if request.method == 'POST':
         form = ReviewForm(request.POST, instance=review)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Review updated.')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('review_edit: IntegrityError saving review pk=%s', pk)
+                messages.error(request, 'Could not save this review — please check the details and try again.')
+            except Exception:
+                logger.exception('review_edit: unexpected error saving review pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this review. Please try again.')
+            else:
+                messages.success(request, 'Review updated.')
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -5249,8 +5689,12 @@ def review_delete(request, pk):
             messages.error(request, 'You do not have permission to delete reviews.')
             return redirect('management:reviews_list')
 
-        review.delete()
-        messages.success(request, 'Review deleted.')
+        try:
+            review.delete()
+            messages.success(request, 'Review deleted.')
+        except Exception:
+            logger.exception('review_delete: unexpected error deleting review pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this review. Please try again.')
     return redirect('management:reviews_list')
 
 
@@ -5289,8 +5733,17 @@ def badge_create(request):
     if request.method == 'POST':
         form = BadgeForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Badge created.')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('badge_create: IntegrityError saving badge')
+                messages.error(request, 'Could not save this badge — that name may already be in use.')
+            except Exception:
+                logger.exception('badge_create: unexpected error saving badge')
+                messages.error(request, 'Something went wrong while saving this badge. Please try again.')
+            else:
+                messages.success(request, 'Badge created.')
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -5309,8 +5762,17 @@ def badge_edit(request, slug):
     if request.method == 'POST':
         form = BadgeForm(request.POST, instance=badge)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Badge updated.')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('badge_edit: IntegrityError saving badge slug=%s', slug)
+                messages.error(request, 'Could not save this badge — that name may already be in use.')
+            except Exception:
+                logger.exception('badge_edit: unexpected error saving badge slug=%s', slug)
+                messages.error(request, 'Something went wrong while saving this badge. Please try again.')
+            else:
+                messages.success(request, 'Badge updated.')
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -5338,8 +5800,12 @@ def badge_delete(request, slug):
             )
             return redirect('management:badges_list')
 
-        badge.delete()
-        messages.success(request, 'Badge deleted.')
+        try:
+            badge.delete()
+            messages.success(request, 'Badge deleted.')
+        except Exception:
+            logger.exception('badge_delete: unexpected error deleting badge slug=%s', slug)
+            messages.error(request, 'Something went wrong while deleting this badge. Please try again.')
     return redirect('management:badges_list')
 
 
@@ -5394,17 +5860,26 @@ def student_badge_assign(request):
     if request.method == 'POST':
         form = StudentBadgeForm(request.POST)
         if form.is_valid():
-            assignment = form.save(commit=False)
-            assignment.awarded_by = request.user
-            assignment.save()
-            messages.success(request, 'Badge assigned.')
-            _notify(
-                user=assignment.student,
-                title=f'Badge Awarded: {assignment.badge.name}',
-                message=f'You have been awarded the "{assignment.badge.name}" badge!',
-                notif_type='system',
-                link='/dashboard/',
-            )
+            try:
+                with transaction.atomic():
+                    assignment = form.save(commit=False)
+                    assignment.awarded_by = request.user
+                    assignment.save()
+            except IntegrityError:
+                logger.exception('student_badge_assign: IntegrityError assigning badge')
+                messages.error(request, 'Could not assign this badge — the student may already have it.')
+            except Exception:
+                logger.exception('student_badge_assign: unexpected error assigning badge')
+                messages.error(request, 'Something went wrong while assigning this badge. Please try again.')
+            else:
+                messages.success(request, 'Badge assigned.')
+                _notify(
+                    user=assignment.student,
+                    title=f'Badge Awarded: {assignment.badge.name}',
+                    message=f'You have been awarded the "{assignment.badge.name}" badge!',
+                    notif_type='system',
+                    link='/dashboard/',
+                )
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -5424,8 +5899,12 @@ def student_badge_delete(request, pk):
             messages.error(request, 'You do not have permission to revoke badges.')
             return redirect('management:student_badges_list')
 
-        student_badge.delete()
-        messages.success(request, 'Badge revoked.')
+        try:
+            student_badge.delete()
+            messages.success(request, 'Badge revoked.')
+        except Exception:
+            logger.exception('student_badge_delete: unexpected error deleting student_badge pk=%s', pk)
+            messages.error(request, 'Something went wrong while revoking this badge. Please try again.')
     return redirect('management:student_badges_list')
 
 # ---------------------------------------------------------------------------
@@ -5472,24 +5951,31 @@ def payment_gateway_create(request):
 
     form = PaymentGatewayForm(request.POST)
     if form.is_valid():
-        gw = form.save(commit=False)
-        gw.api_secret = encrypt_secret(form.cleaned_data.get('api_secret', ''))
-        gw.webhook_secret = encrypt_secret(form.cleaned_data.get('webhook_secret', ''))
-        with transaction.atomic():
-            if gw.is_active:
-                _deactivate_other_gateways(gw)
-            gw.save()
-        AuditLog.objects.create(
-            user=request.user,
-            action='create',
-            model_name='PaymentGateway',
-            object_id=str(gw.pk),
-            description=(
-                f'{request.user.username} added payment gateway "{gw.name}" '
-                f'({gw.gateway_type}, {"active" if gw.is_active else "inactive"}). '
-                f'API secrets not recorded.'
-            ),
-        )
+        try:
+            with transaction.atomic():
+                gw = form.save(commit=False)
+                gw.api_secret = encrypt_secret(form.cleaned_data.get('api_secret', ''))
+                gw.webhook_secret = encrypt_secret(form.cleaned_data.get('webhook_secret', ''))
+                if gw.is_active:
+                    _deactivate_other_gateways(gw)
+                gw.save()
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='create',
+                    model_name='PaymentGateway',
+                    object_id=str(gw.pk),
+                    description=(
+                        f'{request.user.username} added payment gateway "{gw.name}" '
+                        f'({gw.gateway_type}, {"active" if gw.is_active else "inactive"}). '
+                        f'API secrets not recorded.'
+                    ),
+                )
+        except Exception:
+            logger.exception('payment_gateway_create: unexpected error saving gateway')
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong while saving. Please try again.'}]}}, status=500)
+            messages.error(request, 'Something went wrong while saving this gateway. Please try again.')
+            return redirect('management:payment_gateways_list')
         if is_ajax:
             return JsonResponse({'success': True})
         messages.success(request, 'Gateway added.')
@@ -5522,33 +6008,40 @@ def payment_gateway_edit(request, slug):
     gateway = get_object_or_404(PaymentGateway, slug=slug)
     form    = PaymentGatewayForm(request.POST, instance=gateway)
     if form.is_valid():
-        # Preserve existing secrets when fields left blank; encrypt when submitted
-        gw = form.save(commit=False)
-        if not request.POST.get('api_key'):
-            gw.api_key = gateway.api_key
-        if request.POST.get('api_secret'):
-            gw.api_secret = encrypt_secret(request.POST.get('api_secret'))
-        else:
-            gw.api_secret = gateway.api_secret
-        if request.POST.get('webhook_secret'):
-            gw.webhook_secret = encrypt_secret(request.POST.get('webhook_secret'))
-        else:
-            gw.webhook_secret = gateway.webhook_secret
-        with transaction.atomic():
-            if gw.is_active:
-                _deactivate_other_gateways(gw)
-            gw.save()
-        AuditLog.objects.create(
-            user=request.user,
-            action='update',
-            model_name='PaymentGateway',
-            object_id=str(gw.pk),
-            description=(
-                f'{request.user.username} updated payment gateway "{gw.name}" '
-                f'({"active" if gw.is_active else "inactive"})'
-                + (' — API secret rotated.' if request.POST.get('api_secret') else '.')
-            ),
-        )
+        try:
+            with transaction.atomic():
+                # Preserve existing secrets when fields left blank; encrypt when submitted
+                gw = form.save(commit=False)
+                if not request.POST.get('api_key'):
+                    gw.api_key = gateway.api_key
+                if request.POST.get('api_secret'):
+                    gw.api_secret = encrypt_secret(request.POST.get('api_secret'))
+                else:
+                    gw.api_secret = gateway.api_secret
+                if request.POST.get('webhook_secret'):
+                    gw.webhook_secret = encrypt_secret(request.POST.get('webhook_secret'))
+                else:
+                    gw.webhook_secret = gateway.webhook_secret
+                if gw.is_active:
+                    _deactivate_other_gateways(gw)
+                gw.save()
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    model_name='PaymentGateway',
+                    object_id=str(gw.pk),
+                    description=(
+                        f'{request.user.username} updated payment gateway "{gw.name}" '
+                        f'({"active" if gw.is_active else "inactive"})'
+                        + (' — API secret rotated.' if request.POST.get('api_secret') else '.')
+                    ),
+                )
+        except Exception:
+            logger.exception('payment_gateway_edit: unexpected error saving gateway slug=%s', slug)
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong while saving. Please try again.'}]}}, status=500)
+            messages.error(request, 'Something went wrong while saving this gateway. Please try again.')
+            return redirect('management:payment_gateways_list')
         if is_ajax:
             return JsonResponse({'success': True})
         messages.success(request, 'Gateway updated.')
@@ -5585,14 +6078,20 @@ def payment_gateway_delete(request, slug):
 
     gateway_pk = gateway.pk
     gateway_name = gateway.name
-    gateway.delete()
-    AuditLog.objects.create(
-        user=request.user,
-        action='delete',
-        model_name='PaymentGateway',
-        object_id=str(gateway_pk),
-        description=f'{request.user.username} deleted payment gateway "{gateway_name}".',
-    )
+    try:
+        with transaction.atomic():
+            gateway.delete()
+            AuditLog.objects.create(
+                user=request.user,
+                action='delete',
+                model_name='PaymentGateway',
+                object_id=str(gateway_pk),
+                description=f'{request.user.username} deleted payment gateway "{gateway_name}".',
+            )
+    except Exception:
+        logger.exception('payment_gateway_delete: unexpected error deleting gateway slug=%s', slug)
+        messages.error(request, 'Something went wrong while deleting this gateway. Please try again.')
+        return redirect('management:payment_gateways_list')
     messages.success(request, 'Gateway deleted.')
     return redirect('management:payment_gateways_list')
 
@@ -5948,17 +6447,31 @@ def staff_payroll_create(request):
 
     form = StaffPayrollForm(request.POST)
     if form.is_valid():
-        payroll = form.save()
-        AuditLog.objects.create(
-            user=request.user,
-            action='create',
-            model_name='StaffPayroll',
-            object_id=str(payroll.pk),
-            description=(
-                f'{request.user.username} created payroll record {payroll.payroll_reference} '
-                f'for {payroll.staff} ({payroll.month}/{payroll.year}).'
-            ),
-        )
+        try:
+            with transaction.atomic():
+                payroll = form.save()
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='create',
+                    model_name='StaffPayroll',
+                    object_id=str(payroll.pk),
+                    description=(
+                        f'{request.user.username} created payroll record {payroll.payroll_reference} '
+                        f'for {payroll.staff} ({payroll.month}/{payroll.year}).'
+                    ),
+                )
+        except IntegrityError:
+            logger.exception('staff_payroll_create: IntegrityError saving payroll')
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Could not save — this payroll record may already exist.'}]}}, status=400)
+            messages.error(request, 'Could not save — this payroll record may already exist.')
+            return redirect('management:staff_payroll_list')
+        except Exception:
+            logger.exception('staff_payroll_create: unexpected error saving payroll')
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong while saving. Please try again.'}]}}, status=500)
+            messages.error(request, 'Something went wrong while saving this payroll record. Please try again.')
+            return redirect('management:staff_payroll_list')
         messages.success(request, 'Payroll record created.')
         # Notify the staff member a payroll record has been created for them
         month_name = payroll.get_month_display()
@@ -6002,18 +6515,32 @@ def staff_payroll_edit(request, payroll_reference):
     if form.is_valid():
         # Track old status to detect changes
         old_status = payroll.payment_status
-        
-        updated_payroll = form.save()
-        AuditLog.objects.create(
-            user=request.user,
-            action='update',
-            model_name='StaffPayroll',
-            object_id=str(updated_payroll.pk),
-            description=(
-                f'{request.user.username} updated payroll {updated_payroll.payroll_reference} '
-                f'for {updated_payroll.staff}, status "{old_status}" -> "{updated_payroll.payment_status}".'
-            ),
-        )
+
+        try:
+            with transaction.atomic():
+                updated_payroll = form.save()
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    model_name='StaffPayroll',
+                    object_id=str(updated_payroll.pk),
+                    description=(
+                        f'{request.user.username} updated payroll {updated_payroll.payroll_reference} '
+                        f'for {updated_payroll.staff}, status "{old_status}" -> "{updated_payroll.payment_status}".'
+                    ),
+                )
+        except IntegrityError:
+            logger.exception('staff_payroll_edit: IntegrityError saving payroll_reference=%s', payroll_reference)
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Could not save — please check the details and try again.'}]}}, status=400)
+            messages.error(request, 'Could not save — please check the details and try again.')
+            return redirect('management:staff_payroll_list')
+        except Exception:
+            logger.exception('staff_payroll_edit: unexpected error saving payroll_reference=%s', payroll_reference)
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'Something went wrong while saving. Please try again.'}]}}, status=500)
+            messages.error(request, 'Something went wrong while saving this payroll record. Please try again.')
+            return redirect('management:staff_payroll_list')
         messages.success(request, 'Payroll updated.')
         # Notify staff member their payroll record was updated
         month_name = updated_payroll.get_month_display()
@@ -6058,14 +6585,20 @@ def staff_payroll_delete(request, payroll_reference):
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
     payroll_pk = payroll.pk
     payroll_staff = str(payroll.staff)
-    payroll.delete()
-    AuditLog.objects.create(
-        user=request.user,
-        action='delete',
-        model_name='StaffPayroll',
-        object_id=str(payroll_pk),
-        description=f'{request.user.username} deleted payroll record {payroll_reference} for {payroll_staff}.',
-    )
+    try:
+        with transaction.atomic():
+            payroll.delete()
+            AuditLog.objects.create(
+                user=request.user,
+                action='delete',
+                model_name='StaffPayroll',
+                object_id=str(payroll_pk),
+                description=f'{request.user.username} deleted payroll record {payroll_reference} for {payroll_staff}.',
+            )
+    except Exception:
+        logger.exception('staff_payroll_delete: unexpected error deleting payroll_reference=%s', payroll_reference)
+        messages.error(request, 'Something went wrong while deleting this payroll record. Please try again.')
+        return redirect('management:staff_payroll_list')
     messages.success(request, 'Payroll deleted.')
     return redirect('management:staff_payroll_list')
 
@@ -6082,16 +6615,31 @@ def site_config_general(request):
 
     site = SiteConfig.objects.first()
     if request.method == 'POST':
-        form = SiteConfigGeneralForm(request.POST, request.FILES, instance=site)
-        if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='SiteConfig',
-                description='Updated general site configuration'
-            )
-            messages.success(request, 'General site settings saved.')
-            return redirect('management:site_config_general')
+        try:
+            form = SiteConfigGeneralForm(request.POST, request.FILES, instance=site)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='update',
+                            model_name='SiteConfig',
+                            description='Updated general site configuration'
+                        )
+                except IntegrityError:
+                    logger.exception('site_config_general: IntegrityError saving site config')
+                    messages.error(request, 'Could not save these settings — please check the details and try again.')
+                else:
+                    messages.success(request, 'General site settings saved.')
+                    return redirect('management:site_config_general')
+        except SuspiciousOperation:
+            logger.warning('site_config_general: oversized/suspicious upload')
+            messages.error(request, 'Your changes could not be saved — one of the files you uploaded was too large. Please use a smaller file and try again.')
+            form = SiteConfigGeneralForm(instance=site)
+        except Exception:
+            logger.exception('site_config_general: unexpected error saving site config')
+            messages.error(request, 'Something went wrong while saving these settings. Nothing was saved. Please try again.')
+            form = SiteConfigGeneralForm(instance=site)
     else:
         form = SiteConfigGeneralForm(instance=site)
     return render(request, 'management/site_config/general.html', {'form': form, 'site': site})
@@ -6108,16 +6656,31 @@ def site_config_index(request):
 
     site = SiteConfig.objects.first()
     if request.method == 'POST':
-        form = SiteConfigIndexForm(request.POST, request.FILES, instance=site)
-        if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='SiteConfig',
-                description='Updated index page configuration'
-            )
-            messages.success(request, 'Home page settings saved.')
-            return redirect('management:site_config_index')
+        try:
+            form = SiteConfigIndexForm(request.POST, request.FILES, instance=site)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='update',
+                            model_name='SiteConfig',
+                            description='Updated index page configuration'
+                        )
+                except IntegrityError:
+                    logger.exception('site_config_index: IntegrityError saving site config')
+                    messages.error(request, 'Could not save these settings — please check the details and try again.')
+                else:
+                    messages.success(request, 'Home page settings saved.')
+                    return redirect('management:site_config_index')
+        except SuspiciousOperation:
+            logger.warning('site_config_index: oversized/suspicious upload')
+            messages.error(request, 'Your changes could not be saved — one of the files you uploaded was too large. Please use a smaller file and try again.')
+            form = SiteConfigIndexForm(instance=site)
+        except Exception:
+            logger.exception('site_config_index: unexpected error saving site config')
+            messages.error(request, 'Something went wrong while saving these settings. Nothing was saved. Please try again.')
+            form = SiteConfigIndexForm(instance=site)
     else:
         form = SiteConfigIndexForm(instance=site)
     return render(request, 'management/site_config/index_page.html', {'form': form, 'site': site})
@@ -6134,16 +6697,31 @@ def site_config_about(request):
 
     site = SiteConfig.objects.first()
     if request.method == 'POST':
-        form = SiteConfigAboutForm(request.POST, request.FILES, instance=site)
-        if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='SiteConfig',
-                description='Updated about page configuration'
-            )
-            messages.success(request, 'About page settings saved.')
-            return redirect('management:site_config_about')
+        try:
+            form = SiteConfigAboutForm(request.POST, request.FILES, instance=site)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='update',
+                            model_name='SiteConfig',
+                            description='Updated about page configuration'
+                        )
+                except IntegrityError:
+                    logger.exception('site_config_about: IntegrityError saving site config')
+                    messages.error(request, 'Could not save these settings — please check the details and try again.')
+                else:
+                    messages.success(request, 'About page settings saved.')
+                    return redirect('management:site_config_about')
+        except SuspiciousOperation:
+            logger.warning('site_config_about: oversized/suspicious upload')
+            messages.error(request, 'Your changes could not be saved — one of the files you uploaded was too large. Please use a smaller file and try again.')
+            form = SiteConfigAboutForm(instance=site)
+        except Exception:
+            logger.exception('site_config_about: unexpected error saving site config')
+            messages.error(request, 'Something went wrong while saving these settings. Nothing was saved. Please try again.')
+            form = SiteConfigAboutForm(instance=site)
     else:
         form = SiteConfigAboutForm(instance=site)
     return render(request, 'management/site_config/about_page.html', {'form': form, 'site': site})
@@ -6171,16 +6749,25 @@ def site_milestone_create(request):
     if request.method == 'POST':
         form = SiteHistoryMilestoneForm(request.POST)
         if form.is_valid():
-            milestone = form.save(commit=False)
-            milestone.site = SiteConfig.objects.first()
-            milestone.save()
-            AuditLog.objects.create(
-                user=request.user, action='create',
-                model_name='SiteHistoryMilestone',
-                description=f'Created milestone: {milestone}'
-            )
-            messages.success(request, 'Milestone created.')
-            return redirect('management:site_milestones_list')
+            try:
+                with transaction.atomic():
+                    milestone = form.save(commit=False)
+                    milestone.site = SiteConfig.objects.first()
+                    milestone.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='create',
+                        model_name='SiteHistoryMilestone',
+                        description=f'Created milestone: {milestone}'
+                    )
+            except IntegrityError:
+                logger.exception('site_milestone_create: IntegrityError saving milestone')
+                messages.error(request, 'Could not save this milestone — please check the details and try again.')
+            except Exception:
+                logger.exception('site_milestone_create: unexpected error saving milestone')
+                messages.error(request, 'Something went wrong while saving this milestone. Please try again.')
+            else:
+                messages.success(request, 'Milestone created.')
+                return redirect('management:site_milestones_list')
     else:
         form = SiteHistoryMilestoneForm()
     return render(request, 'management/site_config/milestone_form.html', {
@@ -6196,14 +6783,23 @@ def site_milestone_edit(request, pk):
     if request.method == 'POST':
         form = SiteHistoryMilestoneForm(request.POST, instance=milestone)
         if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='SiteHistoryMilestone',
-                description=f'Updated milestone: {milestone}'
-            )
-            messages.success(request, 'Milestone updated.')
-            return redirect('management:site_milestones_list')
+            try:
+                with transaction.atomic():
+                    form.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='update',
+                        model_name='SiteHistoryMilestone',
+                        description=f'Updated milestone: {milestone}'
+                    )
+            except IntegrityError:
+                logger.exception('site_milestone_edit: IntegrityError saving milestone pk=%s', pk)
+                messages.error(request, 'Could not save this milestone — please check the details and try again.')
+            except Exception:
+                logger.exception('site_milestone_edit: unexpected error saving milestone pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this milestone. Please try again.')
+            else:
+                messages.success(request, 'Milestone updated.')
+                return redirect('management:site_milestones_list')
     else:
         form = SiteHistoryMilestoneForm(instance=milestone)
     return render(request, 'management/site_config/milestone_form.html', {
@@ -6217,8 +6813,12 @@ def site_milestone_edit(request, pk):
 def site_milestone_delete(request, pk):
     milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
     if request.method == 'POST':
-        milestone.delete()
-        messages.success(request, 'Milestone deleted.')
+        try:
+            milestone.delete()
+            messages.success(request, 'Milestone deleted.')
+        except Exception:
+            logger.exception('site_milestone_delete: unexpected error deleting milestone pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this milestone. Please try again.')
     return redirect('management:site_milestones_list')
 
 
@@ -6245,14 +6845,23 @@ def testimonial_create(request):
     if request.method == 'POST':
         form = TestimonialForm(request.POST, request.FILES)
         if form.is_valid():
-            t = form.save()
-            AuditLog.objects.create(
-                user=request.user, action='create',
-                model_name='Testimonial',
-                description=f'Created testimonial: {t}'
-            )
-            messages.success(request, 'Testimonial created.')
-            return redirect('management:testimonials_list')
+            try:
+                with transaction.atomic():
+                    t = form.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='create',
+                        model_name='Testimonial',
+                        description=f'Created testimonial: {t}'
+                    )
+            except IntegrityError:
+                logger.exception('testimonial_create: IntegrityError saving testimonial')
+                messages.error(request, 'Could not save this testimonial — please check the details and try again.')
+            except Exception:
+                logger.exception('testimonial_create: unexpected error saving testimonial')
+                messages.error(request, 'Something went wrong while saving this testimonial. Please try again.')
+            else:
+                messages.success(request, 'Testimonial created.')
+                return redirect('management:testimonials_list')
     else:
         form = TestimonialForm()
     return render(request, 'management/site_config/testimonial_form.html', {
@@ -6268,14 +6877,23 @@ def testimonial_edit(request, pk):
     if request.method == 'POST':
         form = TestimonialForm(request.POST, request.FILES, instance=testimonial)
         if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='Testimonial',
-                description=f'Updated testimonial: {testimonial}'
-            )
-            messages.success(request, 'Testimonial updated.')
-            return redirect('management:testimonials_list')
+            try:
+                with transaction.atomic():
+                    form.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='update',
+                        model_name='Testimonial',
+                        description=f'Updated testimonial: {testimonial}'
+                    )
+            except IntegrityError:
+                logger.exception('testimonial_edit: IntegrityError saving testimonial pk=%s', pk)
+                messages.error(request, 'Could not save this testimonial — please check the details and try again.')
+            except Exception:
+                logger.exception('testimonial_edit: unexpected error saving testimonial pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this testimonial. Please try again.')
+            else:
+                messages.success(request, 'Testimonial updated.')
+                return redirect('management:testimonials_list')
     else:
         form = TestimonialForm(instance=testimonial)
     return render(request, 'management/site_config/testimonial_form.html', {
@@ -6289,8 +6907,12 @@ def testimonial_edit(request, pk):
 def testimonial_delete(request, pk):
     testimonial = get_object_or_404(Testimonial, pk=pk)
     if request.method == 'POST':
-        testimonial.delete()
-        messages.success(request, 'Testimonial deleted.')
+        try:
+            testimonial.delete()
+            messages.success(request, 'Testimonial deleted.')
+        except Exception:
+            logger.exception('testimonial_delete: unexpected error deleting testimonial pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this testimonial. Please try again.')
     return redirect('management:testimonials_list')
 
 
@@ -6318,16 +6940,47 @@ def institution_members_list(request):
 @require_permission('site_content', 'can_create', redirect_to='management:institution_members_list')
 def institution_member_create(request):
     if request.method == 'POST':
-        form = InstitutionMemberForm(request.POST, request.FILES)
-        if form.is_valid():
-            m = form.save()
-            AuditLog.objects.create(
-                user=request.user, action='create',
-                model_name='InstitutionMember',
-                description=f'Created member: {m}'
+        try:
+            # Constructing the form is what triggers Django to actually
+            # parse request.POST/request.FILES — if the submitted request
+            # body is larger than DATA_UPLOAD_MAX_MEMORY_SIZE, that parsing
+            # raises SuspiciousOperation right here instead of letting it
+            # surface as an unhandled crash.
+            form = InstitutionMemberForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        m = form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='create',
+                            model_name='InstitutionMember',
+                            description=f'Created member: {m}'
+                        )
+                except IntegrityError:
+                    logger.exception('institution_member_create: IntegrityError saving member')
+                    messages.error(request, 'Could not save this member — please check the details and try again.')
+                else:
+                    messages.success(request, 'Member created.')
+                    return redirect('management:institution_members_list')
+        except SuspiciousOperation:
+            logger.warning('institution_member_create: oversized/suspicious upload')
+            messages.error(
+                request,
+                'This member could not be saved — the photo you uploaded was too '
+                'large for the server to accept. Please use a smaller image and try again.'
             )
-            messages.success(request, 'Member created.')
-            return redirect('management:institution_members_list')
+            form = InstitutionMemberForm()
+        except Exception:
+            # Last-resort net: never let an unexpected error surface as a
+            # raw crash page — log it for diagnosis and show the admin a
+            # clean, actionable message on the same form instead.
+            logger.exception('institution_member_create: unexpected error saving member')
+            messages.error(
+                request,
+                'Something went wrong while saving this member. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+            form = InstitutionMemberForm()
     else:
         form = InstitutionMemberForm()
     return render(request, 'management/site_config/member_form.html', {
@@ -6341,24 +6994,55 @@ def institution_member_create(request):
 def institution_member_edit(request, pk):
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
-        form = InstitutionMemberForm(request.POST, request.FILES, instance=member)
-        if form.is_valid():
-            form.save()
-            AuditLog.objects.create(
-                user=request.user, action='update',
-                model_name='InstitutionMember',
-                description=f'Updated member: {member}'
+        try:
+            # Constructing the form is what triggers Django to actually
+            # parse request.POST/request.FILES — if the submitted request
+            # body is larger than DATA_UPLOAD_MAX_MEMORY_SIZE, that parsing
+            # raises SuspiciousOperation right here instead of letting it
+            # surface as an unhandled crash.
+            form = InstitutionMemberForm(request.POST, request.FILES, instance=member)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='update',
+                            model_name='InstitutionMember',
+                            description=f'Updated member: {member}'
+                        )
+                except IntegrityError:
+                    logger.exception('institution_member_edit: IntegrityError saving member pk=%s', pk)
+                    messages.error(request, 'Could not save changes — please check the details and try again.')
+                else:
+                    messages.success(request, 'Member updated.')
+                    return redirect('management:institution_members_list')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        # Optional: make a nicer message for the photo field
+                        if field == "photo":
+                            messages.error(request, f"Photo upload error: {error}")
+                        else:
+                            messages.error(request, f"{field.capitalize()}: {error}")
+        except SuspiciousOperation:
+            logger.warning('institution_member_edit: oversized/suspicious upload for pk=%s', pk)
+            messages.error(
+                request,
+                'Your changes could not be saved — the photo you uploaded was too '
+                'large for the server to accept. Please use a smaller image and try again.'
             )
-            messages.success(request, 'Member updated.')
-            return redirect('management:institution_members_list')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    # Optional: make a nicer message for the photo field
-                    if field == "photo":
-                        messages.error(request, f"Photo upload error: {error}")
-                    else:
-                        messages.error(request, f"{field.capitalize()}: {error}")
+            form = InstitutionMemberForm(instance=member)
+        except Exception:
+            # Last-resort net: never let an unexpected error surface as a
+            # raw crash page — log it for diagnosis and show the admin a
+            # clean, actionable message on the same form instead.
+            logger.exception('institution_member_edit: unexpected error saving member pk=%s', pk)
+            messages.error(
+                request,
+                'Something went wrong while saving your changes. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+            form = InstitutionMemberForm(instance=member)
     else:
         form = InstitutionMemberForm(instance=member)
     return render(request, 'management/site_config/member_form.html', {
@@ -6372,9 +7056,164 @@ def institution_member_edit(request, pk):
 def institution_member_delete(request, pk):
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
-        member.delete()
-        messages.success(request, 'Member deleted.')
+        try:
+            member.delete()
+            messages.success(request, 'Member deleted.')
+        except Exception:
+            logger.exception('institution_member_delete: unexpected error deleting member pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this member. Please try again.')
     return redirect('management:institution_members_list')
+
+
+# ── ACCREDITATION / AFFILIATES / PARTNERS ─────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_partners_list(request):
+    if not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view accreditation & partner records.')
+        return redirect('management:dashboard')
+
+    partners = InstitutionPartner.objects.all().order_by('category', 'name')
+    return render(request, 'management/site_config/partners_list.html', {
+        'form': InstitutionPartnerForm(),
+        'accreditations': partners.filter(category='accreditation'),
+        'affiliations':   partners.filter(category='affiliation'),
+        'partners':       partners.filter(category='partner'),
+        'accreditation_count': partners.filter(category='accreditation', is_active=True).count(),
+        'affiliation_count':   partners.filter(category='affiliation', is_active=True).count(),
+        'partner_count':       partners.filter(category='partner', is_active=True).count(),
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_partner_create(request):
+    """
+    "Add" is a modal on partners_list.html, not a standalone page — this
+    view exists purely to handle that modal's POST. On success it redirects
+    to institution_partners_list (the modal's JS detects the redirect and
+    reloads); on validation failure it re-renders just the fields partial,
+    which the modal's JS swaps in without a full navigation.
+    """
+    if request.method != 'POST':
+        return redirect('management:institution_partners_list')
+
+    if not _has_permission(request, 'site_content', 'can_create'):
+        messages.error(request, 'You do not have permission to create this record.')
+        return redirect('management:institution_partners_list')
+
+    try:
+        # Constructing the form is what triggers Django to actually parse
+        # request.POST/request.FILES — if the submitted request body is
+        # larger than DATA_UPLOAD_MAX_MEMORY_SIZE, that parsing raises
+        # SuspiciousOperation right here instead of letting it surface as
+        # an unhandled crash.
+        form = InstitutionPartnerForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    obj = form.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='create',
+                        model_name='InstitutionPartner',
+                        description=f'Created {obj.get_category_display()}: {obj}'
+                    )
+            except IntegrityError:
+                logger.exception('institution_partner_create: IntegrityError saving record')
+                messages.error(request, 'Could not save this record — please check the details and try again.')
+            else:
+                messages.success(request, f'{obj.get_category_display()} record created.')
+                return redirect('management:institution_partners_list')
+    except SuspiciousOperation:
+        logger.warning('institution_partner_create: oversized/suspicious upload')
+        messages.error(
+            request,
+            'This record could not be saved — the logo you uploaded was too '
+            'large for the server to accept. Please use a smaller image and try again.'
+        )
+        form = InstitutionPartnerForm()
+    except Exception:
+        # Last-resort net: never let an unexpected error surface as a raw
+        # crash page — log it for diagnosis and show a clean message instead.
+        logger.exception('institution_partner_create: unexpected error saving record')
+        messages.error(
+            request,
+            'Something went wrong while saving this record. Nothing was saved. '
+            'Please try again, and contact support if this keeps happening.'
+        )
+        form = InstitutionPartnerForm()
+
+    return render(request, 'management/site_config/_partner_form_fields.html', {'form': form})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_partner_edit(request, pk):
+    obj = get_object_or_404(InstitutionPartner, pk=pk)
+    if request.method == 'POST':
+        if not _has_permission(request, 'site_content', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit this record.')
+            return redirect('management:institution_partners_list')
+
+        try:
+            # Constructing the form is what triggers Django to actually
+            # parse request.POST/request.FILES — if the submitted request
+            # body is larger than DATA_UPLOAD_MAX_MEMORY_SIZE, that parsing
+            # raises SuspiciousOperation right here instead of letting it
+            # surface as an unhandled crash.
+            form = InstitutionPartnerForm(request.POST, request.FILES, instance=obj)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        AuditLog.objects.create(
+                            user=request.user, action='update',
+                            model_name='InstitutionPartner',
+                            description=f'Updated {obj.get_category_display()}: {obj}'
+                        )
+                except IntegrityError:
+                    logger.exception('institution_partner_edit: IntegrityError saving record pk=%s', pk)
+                    messages.error(request, 'Could not save changes — please check the details and try again.')
+                else:
+                    messages.success(request, f'{obj.get_category_display()} record updated.')
+                    return redirect('management:institution_partners_list')
+        except SuspiciousOperation:
+            logger.warning('institution_partner_edit: oversized/suspicious upload for pk=%s', pk)
+            messages.error(
+                request,
+                'Your changes could not be saved — the logo you uploaded was too '
+                'large for the server to accept. Please use a smaller image and try again.'
+            )
+            form = InstitutionPartnerForm(instance=obj)
+        except Exception:
+            # Last-resort net: never let an unexpected error surface as a raw
+            # crash page — log it for diagnosis and show a clean message instead.
+            logger.exception('institution_partner_edit: unexpected error saving record pk=%s', pk)
+            messages.error(
+                request,
+                'Something went wrong while saving your changes. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+            form = InstitutionPartnerForm(instance=obj)
+    else:
+        form = InstitutionPartnerForm(instance=obj)
+    return render(request, 'management/site_config/_partner_form_fields.html', {'form': form, 'partner': obj})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+@require_permission('site_content', 'can_delete', redirect_to='management:institution_partners_list')
+def institution_partner_delete(request, pk):
+    obj = get_object_or_404(InstitutionPartner, pk=pk)
+    if request.method == 'POST':
+        try:
+            obj.delete()
+            messages.success(request, 'Record deleted.')
+        except Exception:
+            logger.exception('institution_partner_delete: unexpected error deleting record pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this record. Please try again.')
+    return redirect('management:institution_partners_list')
 
 # ── Library: Item List ────────────────────────────────────────────────────────
  
@@ -6451,13 +7290,22 @@ def library_item_create(request):
 
         form = LibraryItemForm(request.POST, request.FILES)
         if form.is_valid():
-            item = form.save(commit=False)
-            item.created_by = request.user
-            item.save()
-            messages.success(request, f'"{item.title}" added to the library.')
-            if 'save_and_add' in request.POST:
-                return redirect('management:library_item_create')
-            return redirect('management:library_items_list')
+            try:
+                with transaction.atomic():
+                    item = form.save(commit=False)
+                    item.created_by = request.user
+                    item.save()
+            except IntegrityError:
+                logger.exception('library_item_create: IntegrityError saving item')
+                messages.error(request, 'Could not save this item — please check the details and try again.')
+            except Exception:
+                logger.exception('library_item_create: unexpected error saving item')
+                messages.error(request, 'Something went wrong while saving this item. Please try again.')
+            else:
+                messages.success(request, f'"{item.title}" added to the library.')
+                if 'save_and_add' in request.POST:
+                    return redirect('management:library_item_create')
+                return redirect('management:library_items_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -6489,9 +7337,18 @@ def library_item_edit(request, pk):
 
         form = LibraryItemForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
-            form.save()
-            messages.success(request, f'"{item.title}" updated successfully.')
-            return redirect('management:library_items_list')
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:
+                logger.exception('library_item_edit: IntegrityError saving item pk=%s', pk)
+                messages.error(request, 'Could not save this item — please check the details and try again.')
+            except Exception:
+                logger.exception('library_item_edit: unexpected error saving item pk=%s', pk)
+                messages.error(request, 'Something went wrong while saving this item. Please try again.')
+            else:
+                messages.success(request, f'"{item.title}" updated successfully.')
+                return redirect('management:library_items_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -6518,8 +7375,12 @@ def library_item_delete(request, pk):
             return redirect('management:library_items_list')
 
         title = item.title
-        item.delete()
-        messages.success(request, f'"{title}" removed from the library.')
+        try:
+            item.delete()
+            messages.success(request, f'"{title}" removed from the library.')
+        except Exception:
+            logger.exception('library_item_delete: unexpected error deleting item pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this item. Please try again.')
     return redirect('management:library_items_list')
  
  
@@ -6535,12 +7396,21 @@ def library_item_toggle_active(request, pk):
     pk is a UUID.
     """
     item = get_object_or_404(LibraryItem, pk=pk)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
-        item.is_active = not item.is_active
-        item.save(update_fields=['is_active'])
+        try:
+            item.is_active = not item.is_active
+            item.save(update_fields=['is_active'])
+        except Exception:
+            logger.exception('library_item_toggle_active: unexpected error toggling item pk=%s', pk)
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': 'Something went wrong. Please try again.'}, status=500)
+            messages.error(request, 'Something went wrong. Please try again.')
+            return redirect('management:library_items_list')
+
         state = 'published' if item.is_active else 'unpublished'
- 
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+
+        if is_ajax:
             return JsonResponse({
                 'success':   True,
                 'is_active': item.is_active,
@@ -6770,14 +7640,18 @@ def admin_question_moderation(request, slug):
         q_id = request.POST.get('question_id')
         action = request.POST.get('action')
         question = get_object_or_404(ExamQuestion, pk=q_id, exam=exam)
-        if action == 'activate':
-            question.is_active = True
-            question.save(update_fields=['is_active'])
-            messages.success(request, f'Question activated.')
-        elif action == 'deactivate':
-            question.is_active = False
-            question.save(update_fields=['is_active'])
-            messages.warning(request, f'Question deactivated.')
+        try:
+            if action == 'activate':
+                question.is_active = True
+                question.save(update_fields=['is_active'])
+                messages.success(request, 'Question activated.')
+            elif action == 'deactivate':
+                question.is_active = False
+                question.save(update_fields=['is_active'])
+                messages.warning(request, 'Question deactivated.')
+        except Exception:
+            logger.exception('admin_question_moderation: unexpected error updating question pk=%s', q_id)
+            messages.error(request, 'Something went wrong while saving this change. Please try again.')
         return redirect('management:admin_question_moderation', slug=slug)
 
     if not _has_permission(request, 'exams', 'can_view'):
@@ -6842,12 +7716,17 @@ def admin_exam_timetable_update(request, slug):
             for e in errors:
                 messages.error(request, e)
         else:
-            exam.start_datetime = start_datetime
-            exam.end_datetime = end_datetime
-            exam.clash_notes = ''
-            exam.save(update_fields=['start_datetime', 'end_datetime', 'clash_notes'])
-            messages.success(request, 'Timetable updated successfully.')
-            return redirect('management:admin_exam_detail', slug=slug)
+            try:
+                exam.start_datetime = start_datetime
+                exam.end_datetime = end_datetime
+                exam.clash_notes = ''
+                exam.save(update_fields=['start_datetime', 'end_datetime', 'clash_notes'])
+            except Exception:
+                logger.exception('admin_exam_timetable_update: unexpected error saving exam slug=%s', slug)
+                messages.error(request, 'Something went wrong while saving the timetable. Please try again.')
+            else:
+                messages.success(request, 'Timetable updated successfully.')
+                return redirect('management:admin_exam_detail', slug=slug)
 
     return render(request, 'management/exam_timetable.html', {'exam': exam})
 

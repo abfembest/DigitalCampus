@@ -960,12 +960,17 @@ def custom_404(request, exception=None):
 # PUBLIC PAGES
 # =============================================================================
 
+THEOLOGY_SCHOOL_HOST = 'theology.miuedu.com'
+
+
 @check_for_auth
 def index(request):
     from .models import Testimonial
     captcha_question, captcha_answer = generate_captcha()
     request.session['contact_captcha_answer'] = captcha_answer
+    current_host = request.get_host().split(':')[0].lower()
     return render(request, 'index.html', {
+        'show_theology_ad': current_host != THEOLOGY_SCHOOL_HOST,
         'featured_programs': (
             Program.objects
             .filter(is_active=True, is_featured=True)

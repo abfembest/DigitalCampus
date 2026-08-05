@@ -217,6 +217,12 @@ urlpatterns = [
     path('site-config/members/<int:pk>/edit/', views.institution_member_edit, name='institution_member_edit'),
     path('site-config/members/<int:pk>/delete/', views.institution_member_delete, name='institution_member_delete'),
 
+    # Accreditation / Affiliates / Partners
+    path('site-config/partners/', views.institution_partners_list, name='institution_partners_list'),
+    path('site-config/partners/create/', views.institution_partner_create, name='institution_partner_create'),
+    path('site-config/partners/<int:pk>/edit/', views.institution_partner_edit, name='institution_partner_edit'),
+    path('site-config/partners/<int:pk>/delete/', views.institution_partner_delete, name='institution_partner_delete'),
+
     # ── Exams (Superadmin) ────────────────────────────────────────────────────
     path('exams/', views.admin_exam_list, name='admin_exam_list'),
     path('exams/<slug:slug>/', views.admin_exam_detail, name='admin_exam_detail'),

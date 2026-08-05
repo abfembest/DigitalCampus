@@ -134,6 +134,22 @@ function createAjaxModal(opts) {
       var html = await resp.text();
       if (swapFields(html)) {
         modalBody.scrollTop = 0;
+        if (window.Swal) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: 'Please fix the highlighted errors and try again.',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true,
+            didOpen: function (toast) {
+              toast.addEventListener('mouseenter', Swal.stopTimer);
+              toast.addEventListener('mouseleave', Swal.resumeTimer);
+            },
+            customClass: { popup: 'colored-toast' },
+          });
+        }
       } else {
         window.location.href = modalForm.action;
       }

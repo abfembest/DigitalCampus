@@ -934,6 +934,10 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'members' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-user-tie mr-2" aria-hidden="true"></i>Leadership &amp; Staff
                             </a>
+                            <a href="{% url 'management:institution_partners_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'partners' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-award mr-2" aria-hidden="true"></i>Accreditation &amp; Partners
+                            </a>
                         </div>
                     </div>
                     {% endif %}{# /site_content #}

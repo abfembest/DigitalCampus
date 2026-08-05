@@ -93,6 +93,7 @@
   /* Custom Fonts */
   --font-sans: Inter, system-ui, -apple-system, sans-serif;
   --font-heading: Poppins, system-ui, -apple-system, sans-serif;
+  --font-display: Poppins, system-ui, -apple-system, sans-serif;
 
   /* Custom Animations */
   --animate-fade-in: fade-in 0.6s ease-out;

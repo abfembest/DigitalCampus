@@ -22,6 +22,7 @@ from eduweb.models import (
     Enrollment,
     Faculty,
     InstitutionMember,
+    InstitutionPartner,
     Invoice,
     LMSCourse,
     LibraryItem,
@@ -1105,6 +1106,20 @@ class InstitutionMemberForm(forms.ModelForm):
 
     def clean_photo(self):
         return _validate_upload(self.cleaned_data.get('photo'), IMAGE_EXTENSIONS)
+
+
+class InstitutionPartnerForm(forms.ModelForm):
+    class Meta:
+        model = InstitutionPartner
+        fields = ['category', 'name', 'location', 'logo', 'is_active']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white'}),
+            'name':     forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Federal Government of Nigeria, Abuja'"}),
+            'location': forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'New Jersey, USA' (optional)"}),
+        }
+
+    def clean_logo(self):
+        return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
 
 
 class BrandingConfigForm(forms.Form):

@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Leadership &amp; Staff — MIU Admin{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto">
+<div class="max-w-full">
 
   {# ── Breadcrumb ── #}
   <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
@@ -16,7 +16,7 @@
     <div>
       <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Leadership &amp; Staff</h1>
-      <p class="text-gray-500 mt-1 text-sm">Board members and staff shown in the Leadership section on the About page.</p>
+      <p class="text-gray-500 mt-1 text-sm">Board members and staff shown in the Leadership section on the About page. Hover a photo to feature that person in "Who We Are".</p>
     </div>
     {% if permissions.site_content.can_create %}
     <a href="{% url 'management:institution_member_create' %}"
@@ -28,107 +28,125 @@
 
   {# ── Stats bar ── #}
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-    {% for type_value, type_label in member_type_choices %}
     <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 text-center">
-      <div class="text-xl font-bold text-primary-600">
-        {{ members|length }}
-      </div>
-      <div class="text-xs text-gray-500 mt-0.5">{{ type_label }}</div>
+      <div class="text-xl font-bold text-primary-600">{{ admin_board_count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Administrative / Management Board</div>
     </div>
-    {% empty %}
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 col-span-4 text-center">
-      <span class="text-2xl font-bold text-primary-600">{{ members|length }}</span>
-      <span class="text-sm text-gray-500 ml-2">Total Members</span>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 text-center">
+      <div class="text-xl font-bold text-primary-600">{{ academic_board_count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Academic Board</div>
     </div>
-    {% endfor %}
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 text-center">
+      <div class="text-xl font-bold text-primary-600">{{ advisorate_board_count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Advisorate Board</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 text-center">
+      <div class="text-xl font-bold text-primary-600">{{ staff_count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Staff</div>
+    </div>
   </div>
 
-  {# ── Member groups ── #}
-  {# We use regroup correctly here — no {% empty %} inside regroup #}
-  {% regroup members by get_member_type_display as member_groups %}
+  {# ── Members table ── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto p-5">
+      <table id="membersDataTable" class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+          <tr>
+            <th class="py-3 px-4 text-left font-semibold">Photo</th>
+            <th class="py-3 px-4 text-left font-semibold">Name</th>
+            <th class="py-3 px-4 text-left font-semibold">Role</th>
+            <th class="py-3 px-4 text-left font-semibold">Board / Group</th>
+            <th class="py-3 px-4 text-left font-semibold">Status</th>
+            <th class="py-3 px-4 text-left font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for m in members %}
+          <tr class="hover:bg-gray-50 transition-colors">
 
-  {% if member_groups %}
-    {% for group in member_groups %}
-    <div class="mb-10">
-      {# Group heading #}
-      <div class="flex items-center gap-3 mb-4">
-        <span class="w-8 h-0.5 bg-primary-300 inline-block rounded-full"></span>
-        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">{{ group.grouper }}</h2>
-        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-          {{ group.list|length }}
-        </span>
-      </div>
-
-      <div class="space-y-3">
-        {% for m in group.list %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-          <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
-
-            {# Avatar #}
-            <div class="w-14 h-14 rounded-full flex-shrink-0 overflow-hidden bg-primary-50 border-2 border-primary-100 flex items-center justify-center">
-              {% if m.photo %}
-              <img src="{{ m.photo.url }}" class="w-full h-full object-cover object-top" alt="{{ m.name }}">
-              {% else %}
-              <span class="text-primary-500 font-bold text-sm">{{ m.name|slice:":2"|upper }}</span>
-              {% endif %}
-            </div>
-
-            {# Info #}
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2 mb-0.5">
-                <h3 class="font-semibold text-gray-800">{{ m.name }}</h3>
-                {% if m.is_active %}
-                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active</span>
-                {% else %}
-                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">Hidden</span>
+            {# Photo — hover to feature in "Who We Are" #}
+            <td class="py-3 px-4">
+              <div class="relative w-12 h-12 group/avatar">
+                <div class="w-12 h-12 rounded-full overflow-hidden bg-primary-50 border-2 {% if m.is_who_we_are %}border-amber-400{% else %}border-primary-100{% endif %} flex items-center justify-center">
+                  {% if m.photo %}
+                  <img src="{{ m.photo.url }}" class="w-full h-full object-cover object-top" alt="{{ m.name }}">
+                  {% else %}
+                  <span class="text-primary-500 font-bold text-sm">{{ m.name|slice:":2"|upper }}</span>
+                  {% endif %}
+                </div>
+                {% if m.is_who_we_are %}
+                <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-white flex items-center justify-center shadow" title="Featured in &quot;Who We Are&quot;">
+                  <i class="fas fa-star text-[10px]"></i>
+                </span>
+                {% endif %}
+                {% if permissions.site_content.can_edit %}
+                <form method="post" action="{% url 'management:institution_member_set_who_we_are' m.pk %}" class="absolute inset-0">
+                  {% csrf_token %}
+                  <button type="submit"
+                          title="{% if m.is_who_we_are %}Remove from &quot;Who We Are&quot;{% else %}Show in &quot;Who We Are&quot;{% endif %}"
+                          class="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity
+                                 {% if m.is_who_we_are %}bg-amber-500/80{% else %}bg-gray-900/60{% endif %}">
+                    <i class="fas fa-star text-white text-xs"></i>
+                  </button>
+                </form>
                 {% endif %}
               </div>
-              <p class="text-sm text-primary-600 font-medium">{{ m.role }}</p>
-              {% if m.bio %}
-              <p class="text-xs text-gray-400 mt-1 line-clamp-1">{{ m.bio|truncatechars:120 }}</p>
+            </td>
+
+            {# Name #}
+            <td class="py-3 px-4">
+              <div class="font-medium text-gray-800">{{ m.name }}</div>
+              {% if m.is_who_we_are %}
+              <span class="text-xs text-amber-600 font-medium"><i class="fas fa-star text-[10px]"></i> Who We Are</span>
               {% endif %}
-            </div>
+            </td>
+
+            {# Role #}
+            <td class="py-3 px-4 text-gray-600">{{ m.role }}</td>
+
+            {# Board / Group #}
+            <td class="py-3 px-4 text-gray-600">{{ m.get_member_type_display }}</td>
+
+            {# Status #}
+            <td class="py-3 px-4">
+              {% if m.is_active %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Hidden
+              </span>
+              {% endif %}
+            </td>
 
             {# Actions #}
-            <div class="flex items-center gap-2 flex-shrink-0">
-              {% if permissions.site_content.can_edit %}
-              <a href="{% url 'management:institution_member_edit' m.pk %}"
-                 class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                <i class="fas fa-edit"></i>
-              </a>
-              {% endif %}
-              {% if permissions.site_content.can_delete %}
-              <button type="button"
-                      onclick="confirmDelete('{% url 'management:institution_member_delete' m.pk %}', '{{ m.name|escapejs }}')"
-                      class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-              {% endif %}
-            </div>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2">
+                {% if permissions.site_content.can_edit %}
+                <a href="{% url 'management:institution_member_edit' m.pk %}"
+                   class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                  <i class="fas fa-edit text-sm"></i>
+                </a>
+                {% endif %}
+                {% if permissions.site_content.can_delete %}
+                <button type="button"
+                        onclick="confirmDelete('{% url 'management:institution_member_delete' m.pk %}', '{{ m.name|escapejs }}')"
+                        class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                  <i class="fas fa-trash-alt text-sm"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
 
-          </div>
-        </div>
-        {% endfor %}
-      </div>
+          </tr>
+          {% empty %}
+          <tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    {% endfor %}
-
-  {% else %}
-  {# Empty state — shown when members queryset is empty #}
-  <div class="bg-white rounded-xl p-16 text-center shadow-sm border border-gray-200">
-    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-      <i class="fas fa-user-tie text-3xl text-gray-300"></i>
-    </div>
-    <p class="font-semibold text-gray-600 mb-1">No members yet</p>
-    <p class="text-sm text-gray-400 mb-4">Add your first board member or staff to display them on the About page.</p>
-    {% if permissions.site_content.can_create %}
-    <a href="{% url 'management:institution_member_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-colors">
-      <i class="fas fa-plus"></i> Add First Member
-    </a>
-    {% endif %}
   </div>
-  {% endif %}
 
 </div>
 
@@ -154,5 +172,38 @@ function confirmDelete(url, name) {
     }
   });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  var tableOpts = {
+    pageLength: 10,
+    order: [[1, 'asc']],
+    columns: [
+      { orderable: false, searchable: false },
+      null, null, null, null,
+      { orderable: false, searchable: false },
+    ],
+    dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 pt-4 border-t"ip>',
+    language: {
+      search: '_INPUT_',
+      searchPlaceholder: 'Search by name, role, board…',
+      lengthMenu: 'Show _MENU_',
+      info: '_START_–_END_ of _TOTAL_',
+      paginate: {
+        previous: '<i class="fas fa-chevron-left"></i>',
+        next: '<i class="fas fa-chevron-right"></i>'
+      },
+      emptyTable: 'No members found'
+    },
+    initComplete: function () {
+      var api = this.api();
+      if (api.page.info().recordsTotal === 1) {
+        var firstRow = api.row(0).data();
+        if (firstRow && firstRow[1] === '') { api.clear().draw(); }
+      }
+    }
+  };
+
+  try { $('#membersDataTable').DataTable(tableOpts); } catch (e) {}
+});
 </script>
 {% endblock %}

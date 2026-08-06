@@ -216,6 +216,7 @@ urlpatterns = [
     path('site-config/members/create/', views.institution_member_create, name='institution_member_create'),
     path('site-config/members/<int:pk>/edit/', views.institution_member_edit, name='institution_member_edit'),
     path('site-config/members/<int:pk>/delete/', views.institution_member_delete, name='institution_member_delete'),
+    path('site-config/members/<int:pk>/set-who-we-are/', views.institution_member_set_who_we_are, name='institution_member_set_who_we_are'),
 
     # Accreditation / Affiliates / Partners
     path('site-config/partners/', views.institution_partners_list, name='institution_partners_list'),

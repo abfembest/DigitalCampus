@@ -1096,7 +1096,7 @@ class TestimonialForm(forms.ModelForm):
 class InstitutionMemberForm(forms.ModelForm):
     class Meta:
         model = InstitutionMember
-        fields = ['member_type', 'name', 'role', 'photo', 'bio', 'is_active']
+        fields = ['member_type', 'name', 'role', 'photo', 'bio', 'is_active', 'is_who_we_are']
         widgets = {
             'member_type':   forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white'}),
             'name':          forms.TextInput(attrs=_SC_I),

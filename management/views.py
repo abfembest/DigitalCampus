@@ -6985,6 +6985,7 @@ def institution_member_create(request):
         form = InstitutionMemberForm()
     return render(request, 'management/site_config/member_form.html', {
         'form': form, 'member': None,
+        'current_who_we_are': InstitutionMember.objects.filter(is_who_we_are=True).first(),
     })
 
 
@@ -7047,6 +7048,7 @@ def institution_member_edit(request, pk):
         form = InstitutionMemberForm(instance=member)
     return render(request, 'management/site_config/member_form.html', {
         'form': form, 'member': member,
+        'current_who_we_are': InstitutionMember.objects.filter(is_who_we_are=True).exclude(pk=member.pk).first(),
     })
 
 
@@ -7062,6 +7064,32 @@ def institution_member_delete(request, pk):
         except Exception:
             logger.exception('institution_member_delete: unexpected error deleting member pk=%s', pk)
             messages.error(request, 'Something went wrong while deleting this member. Please try again.')
+    return redirect('management:institution_members_list')
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:institution_members_list')
+def institution_member_set_who_we_are(request, pk):
+    """Quick-toggle a member as the one featured in the About page 'Who We Are' section."""
+    member = get_object_or_404(InstitutionMember, pk=pk)
+    if request.method == 'POST':
+        try:
+            member.is_who_we_are = not member.is_who_we_are
+            member.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='InstitutionMember',
+                description=f'{"Featured" if member.is_who_we_are else "Unfeatured"} member in "Who We Are": {member}'
+            )
+        except Exception:
+            logger.exception('institution_member_set_who_we_are: unexpected error toggling member pk=%s', pk)
+            messages.error(request, 'Something went wrong. Please try again.')
+        else:
+            if member.is_who_we_are:
+                messages.success(request, f'{member.name} is now featured in "Who We Are".')
+            else:
+                messages.success(request, f'{member.name} removed from "Who We Are".')
     return redirect('management:institution_members_list')
 
 

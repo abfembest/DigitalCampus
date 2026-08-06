@@ -997,6 +997,14 @@ def index(request):
 def about(request):
     from .models import InstitutionMember, SiteConfig, SiteHistoryMilestone, InstitutionPartner
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
+    admin_board_members = (
+        InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
+        .order_by('name')
+    )
+    who_we_are_member = (
+        InstitutionMember.objects.filter(is_who_we_are=True, is_active=True).first()
+        or admin_board_members.first()
+    )
     return render(request, 'about.html', {
         'default_core_values': [
             'Sound Biblical Foundation',
@@ -1006,10 +1014,8 @@ def about(request):
             'End-time Readiness & Gospel Excellence',
         ],
         'faculties': Faculty.objects.filter(is_active=True).order_by('name'),
-        'admin_board_members': (
-            InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
-            .order_by('name')
-        ),
+        'admin_board_members': admin_board_members,
+        'who_we_are_member': who_we_are_member,
         'academic_board_members': (
             InstitutionMember.objects.filter(member_type='academic_board', is_active=True)
             .order_by('name')

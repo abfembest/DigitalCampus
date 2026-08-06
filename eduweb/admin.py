@@ -663,8 +663,8 @@ class FacultyAdmin(admin.ModelAdmin):
 
 @admin.register(InstitutionMember)
 class InstitutionMemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'role', 'member_type', 'is_active')
-    list_filter = ('member_type', 'is_active')
+    list_display = ('name', 'role', 'member_type', 'is_active', 'is_who_we_are')
+    list_filter = ('member_type', 'is_active', 'is_who_we_are')
     search_fields = ('name', 'role', 'bio')
     list_editable = ('is_active',)
 
@@ -673,7 +673,7 @@ class InstitutionMemberAdmin(admin.ModelAdmin):
             'fields': ('member_type', 'name', 'role', 'photo', 'bio')
         }),
         ('Display', {
-            'fields': ('is_active',)
+            'fields': ('is_active', 'is_who_we_are')
         }),
     )
 

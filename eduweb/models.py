@@ -1199,6 +1199,11 @@ class InstitutionMember(models.Model):
     photo         = models.ImageField(upload_to='institution/members/', blank=True, null=True)
     bio           = models.TextField(blank=True)
     is_active     = models.BooleanField(default=True)
+    is_who_we_are = models.BooleanField(
+        default=False,
+        verbose_name='Show in "Who We Are"',
+        help_text='Featured on the About page "Who We Are" section. Only one member may be featured at a time.',
+    )
 
     class Meta:
         ordering = ['name']
@@ -1207,6 +1212,11 @@ class InstitutionMember(models.Model):
 
     def __str__(self):
         return f'{self.name} — {self.get_member_type_display()}'
+
+    def save(self, *args, **kwargs):
+        if self.is_who_we_are:
+            InstitutionMember.objects.filter(is_who_we_are=True).exclude(pk=self.pk).update(is_who_we_are=False)
+        super().save(*args, **kwargs)
 
 #################### DEPARTMENTS #####################
 

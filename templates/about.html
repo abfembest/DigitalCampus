@@ -205,7 +205,7 @@
                  itemscope itemtype="https://schema.org/Person">
               <img src="{{ founder.photo.url }}"
                    alt="Portrait of {{ founder.name }}, {{ founder.role }}"
-                   class="w-full h-64 sm:h-80 lg:h-137 object-cover object-center"
+                   class="w-full aspect-square object-cover object-center"
                    loading="lazy"
                    itemprop="image">
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-primary-950/90 via-primary-950/50 to-transparent
@@ -219,7 +219,7 @@
           {% else %}
             <div class="relative rounded-2xl overflow-hidden shadow-2xl
                         bg-gradient-to-br from-primary-900 to-primary-700
-                        h-64 sm:h-80 lg:h-137
+                        aspect-square
                         flex flex-col items-center justify-center gap-4 sm:gap-5"
                  role="img"
                  aria-label="{% if founder %}{{ founder.name }}, {{ founder.role }}{% else %}Dr. John Amarachukwu Daniel, Founder / President{% endif %}">
@@ -630,7 +630,7 @@
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                  itemscope itemtype="https://schema.org/Person">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
             {% if member.photo %}
               <img src="{{ member.photo.url }}"
                    alt="Portrait of {{ member.name }}"
@@ -664,7 +664,7 @@
         {% for item in "12345"|make_list %}
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
             <img src="{% static 'images/board-admin-'|add:forloop.counter|add:'.jpg' %}"
                  alt=""
                  class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
@@ -708,7 +708,7 @@
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
                  itemscope itemtype="https://schema.org/Person">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
             {% if member.photo %}
               <img src="{{ member.photo.url }}"
                    alt="Portrait of {{ member.name }}"
@@ -742,7 +742,7 @@
         {% for item in "1234567"|make_list %}
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
             <img src="{% static 'images/board-academic-'|add:forloop.counter|add:'.jpg' %}"
                  alt=""
                  class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
@@ -778,7 +778,7 @@
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
                  itemscope itemtype="https://schema.org/Person">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
             {% if member.photo %}
               <img src="{{ member.photo.url }}"
                    alt="Portrait of {{ member.name }}"
@@ -812,7 +812,7 @@
         {% for item in "12345"|make_list %}
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
             <img src="{% static 'images/board-advisorate-'|add:forloop.counter|add:'.jpg' %}"
                  alt=""
                  class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
@@ -848,7 +848,7 @@
         <div class="w-1/2 sm:w-1/3 md:w-1/4 xl:w-1/5 p-1.5 sm:p-2 lg:p-3">
         <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
                  itemscope itemtype="https://schema.org/Person">
-          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-emerald-100 to-emerald-200 overflow-hidden flex items-center justify-center">
+          <div class="relative aspect-square bg-gradient-to-br from-emerald-100 to-emerald-200 overflow-hidden flex items-center justify-center">
             {% if member.photo %}
               <img src="{{ member.photo.url }}"
                    alt="Portrait of {{ member.name }}"

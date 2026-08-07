@@ -1102,6 +1102,14 @@ class InstitutionMemberForm(forms.ModelForm):
             'name':          forms.TextInput(attrs=_SC_I),
             'role':          forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Vice Chancellor'"}),
             'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
+            'photo':         forms.ClearableFileInput(attrs={
+                'class': 'crop-upload w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 '
+                         'file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 '
+                         'file:text-sm file:font-medium hover:file:bg-primary-100',
+                'accept': 'image/*',
+                'data-crop-ratio': '1',
+                'data-crop-output': '800',
+            }),
         }
 
     def clean_photo(self):

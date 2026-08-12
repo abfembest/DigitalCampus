@@ -502,6 +502,22 @@
      padding-left: 2.75rem;
    }
 
+/* ── Auto-linked bio text (leadership member detail page) ──
+      Django's `urlize` filter generates <a> tags with no class attribute,
+      so emails/URLs it finds inside bio text can't be styled via a
+      template-side utility class — same limitation as .input-group above. */
+   .bio-content a {
+     color: var(--color-primary-600);
+     font-weight: 600;
+     text-decoration: underline;
+     text-decoration-color: var(--color-primary-300);
+     text-underline-offset: 2px;
+   }
+
+   .bio-content a:hover {
+     color: var(--color-primary-800);
+   }
+
    /* Brand icon SVGs used in place of removed Lucide brand icons */
    .brand-icon {
      display: inline-block;

@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from functools import lru_cache
 import uuid
 import os
+import re
 import base64
 import hashlib
 from decimal import Decimal, ROUND_HALF_UP
@@ -1224,6 +1225,62 @@ class Faculty(models.Model):
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+# Matches URLs/emails and phone-number-looking runs inside bio text so
+# InstitutionMember.bio_blocks can hand the template pre-split (text, kind, href)
+# runs — the template then knows which runs are links/phone numbers (and should
+# start on their own line) without needing to parse the text itself.
+_LINK_RUN_RE = re.compile(r'(https?://\S+|www\.\S+|[\w.+-]+@[\w.-]+\.\w+)')
+_PHONE_RUN_RE = re.compile(r'(\+?\d[\d\-\s()]{7,}\d)')
+_MIN_PHONE_DIGITS = 9  # avoids false-positiving on a "2013 - 2019" experience date range
+_TRAILING_PUNCT = '.,;:!?)"\'”’'
+
+
+def _split_phone_runs(text):
+    """Split plain text into (segment, kind, href) triples, pulling out phone numbers."""
+    runs = []
+    pos = 0
+    for match in _PHONE_RUN_RE.finditer(text):
+        if match.start() > pos:
+            runs.append((text[pos:match.start()], 'text', None))
+        raw = match.group(1)
+        digit_count = len(re.sub(r'\D', '', raw))
+        if digit_count >= _MIN_PHONE_DIGITS:
+            runs.append((raw, 'tel', re.sub(r'[^\d+]', '', raw)))
+        else:
+            runs.append((raw, 'text', None))
+        pos = match.end()
+    if pos < len(text):
+        runs.append((text[pos:], 'text', None))
+    return runs
+
+
+def _split_runs(text):
+    """Split bio text into (segment, kind, href) triples — kind is 'link', 'tel', or 'text'.
+
+    Link/phone runs are kept separate (rather than left inline) so the template can put
+    a line break before each one — a URL or contact number tucked mid-sentence otherwise
+    reads poorly next to the surrounding prose.
+    """
+    runs = []
+    pos = 0
+    for match in _LINK_RUN_RE.finditer(text):
+        if match.start() > pos:
+            runs.extend(_split_phone_runs(text[pos:match.start()]))
+        raw = match.group(0)
+        trailing = ''
+        while raw and raw[-1] in _TRAILING_PUNCT:
+            trailing = raw[-1] + trailing
+            raw = raw[:-1]
+        if raw:
+            runs.append((raw, 'link', None))
+        if trailing:
+            runs.append((trailing, 'text', None))
+        pos = match.end()
+    if pos < len(text):
+        runs.extend(_split_phone_runs(text[pos:]))
+    return runs
+
+
 class InstitutionMember(models.Model):
     """Board members and institutional staff for About page"""
     MEMBER_TYPE_CHOICES = [
@@ -1257,19 +1314,75 @@ class InstitutionMember(models.Model):
             InstitutionMember.objects.filter(is_who_we_are=True).exclude(pk=self.pk).update(is_who_we_are=False)
         super().save(*args, **kwargs)
 
+    @cached_property
+    def bio_blocks(self):
+        """Bio text split into heading / list / paragraph blocks for the template to render.
+
+        Authoring rules (see the help text on the Bio field in member_form.html):
+        - A line typed in ALL CAPS becomes a section heading.
+        - A line starting with "| " becomes one item in a bullet list.
+        - A blank line ends the current paragraph or list.
+        No HTML is built here — this only sorts lines into buckets; the
+        <h3>/<ul>/<p> markup and styling live entirely in the template.
+        """
+        blocks = []
+        para_lines = []
+        list_items = []
+
+        def flush_para():
+            if para_lines:
+                # Keep each typed line separate (rendered with a <br> between them in the
+                # template) instead of collapsing them with spaces — a Contact block typed
+                # as "email / phone / office" on three lines should stay three lines.
+                blocks.append({'type': 'para', 'lines': [_split_runs(l) for l in para_lines]})
+                para_lines.clear()
+
+        def flush_list():
+            if list_items:
+                blocks.append({'type': 'list', 'items': [_split_runs(item) for item in list_items]})
+                list_items.clear()
+
+        for raw_line in (self.bio or '').strip().splitlines():
+            line = raw_line.strip()
+            if not line:
+                flush_para()
+                flush_list()
+                continue
+            if line.startswith('|'):
+                flush_para()
+                item = line[1:].strip()
+                if item:
+                    list_items.append(item)
+                continue
+            if len(line) <= 60 and line.isupper() and any(c.isalpha() for c in line):
+                flush_para()
+                flush_list()
+                blocks.append({'type': 'heading', 'text': line})
+                continue
+            flush_list()
+            para_lines.append(line)
+        flush_para()
+        flush_list()
+        return blocks
+
     @property
     def bio_preview(self):
-        """First line of the bio — shown on the About page card."""
-        if not self.bio or not self.bio.strip():
-            return ''
-        return self.bio.strip().splitlines()[0].strip()
+        """First paragraph of the bio (skipping headings/lists) — shown on the About page card."""
+        for block in self.bio_blocks:
+            if block['type'] == 'para':
+                return ' '.join(''.join(text for text, _kind, _href in line) for line in block['lines'])
+        return ''
 
     @property
     def bio_has_more(self):
-        """Whether the bio has content beyond the first line (i.e. a "Read more" page is worth showing)."""
-        if not self.bio or not self.bio.strip():
+        """Whether the bio has content beyond the preview paragraph (i.e. a "Read more" page is worth showing)."""
+        blocks = self.bio_blocks
+        if not blocks:
             return False
-        return len(self.bio.strip().splitlines()) > 1
+        first_para_index = next((i for i, b in enumerate(blocks) if b['type'] == 'para'), None)
+        if first_para_index is None:
+            return True
+        return len(blocks) > first_para_index + 1
 
 #################### DEPARTMENTS #####################
 

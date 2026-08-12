@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{% if member %}Edit{% else %}New{% endif %} Member — MIU Admin{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="max-w-6xl mx-auto">
 
   {# ── Breadcrumb ── #}
   <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
@@ -22,6 +22,9 @@
     <p class="text-gray-500 mt-1 text-sm">Displayed in the Leadership &amp; Governance section on the About page.</p>
   </div>
 
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+
+  {# ── Left: form ── #}
   <form method="post" enctype="multipart/form-data" class="space-y-6">
     {% csrf_token %}
 
@@ -109,18 +112,10 @@
             Bio <span class="text-gray-400 font-normal">(optional)</span>
           </label>
           {{ form.bio }}
-          <div class="text-xs text-gray-400 mt-1.5 space-y-1">
-            <p>
-              <i class="fas fa-info-circle mr-1"></i>
-              <strong>First line</strong> is shown as the short preview on the public About page card.
-            </p>
-            <p>
-              If you add more after that first line, a <strong>"Read more"</strong> link appears on the card,
-              opening a full page with the member's photo and the complete text below — shown
-              exactly as typed, including line breaks and spacing. Press Enter after your first
-              line, then write the rest.
-            </p>
-          </div>
+          <p class="text-xs text-gray-400 mt-1.5">
+            <i class="fas fa-info-circle mr-1"></i>
+            See the formatting guide on the right for how to add headings, bullet lists, and contact details.
+          </p>
         </div>
 
         {# Active #}
@@ -172,5 +167,51 @@
     </div>
   </form>
 
+  {# ── Right: Bio formatting guide ── #}
+  <aside class="lg:sticky lg:top-20">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+        <i class="fas fa-book-open text-primary-500"></i>
+        <h2 class="font-semibold text-gray-800">Bio Formatting Guide</h2>
+      </div>
+      <div class="p-6 space-y-4 text-xs text-gray-500">
+
+        <p>
+          <i class="fas fa-info-circle mr-1"></i>
+          <strong>First paragraph</strong> is shown as the short preview on the public About page card.
+          If you add more below it, a <strong>"Read more"</strong> link opens a full page with the
+          member's photo and the rest of the text, nicely formatted.
+        </p>
+
+        <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-1.5">
+          <p class="font-semibold text-gray-600">3 simple rules:</p>
+          <p>1. Type a line in <strong>ALL CAPITAL LETTERS</strong> to make it a section heading (e.g. <code class="bg-white px-1 rounded border border-gray-200">ABOUT</code>, <code class="bg-white px-1 rounded border border-gray-200">TEACHING &amp; COURSES</code>).</p>
+          <p>2. Start a line with a vertical bar and a space to make it a bullet point: <code class="bg-white px-1 rounded border border-gray-200">| PhD in Computer Science</code></p>
+          <p>3. Leave a blank line between paragraphs, headings, and lists.</p>
+          <p>Any email address, website, or phone number you type is automatically turned into a clickable link. No other symbols needed.</p>
+        </div>
+
+        <div>
+          <p class="italic mb-1.5">Example:</p>
+          <pre class="p-3 bg-gray-50 border border-gray-200 rounded-lg whitespace-pre-wrap break-words font-mono text-gray-500">Dr. Sarah Adeyemi is a senior lecturer specializing in AI applications in education.
+
+ACADEMIC QUALIFICATIONS
+| PhD in Computer Science, University of Lagos
+| MSc in Computer Science, University of Ibadan
+
+TEACHING &amp; COURSES
+| Introduction to AI
+| Machine Learning
+
+CONTACT
+sarah.adeyemi@miu.edu.ng
++234 801 234 5678</pre>
+        </div>
+
+      </div>
+    </div>
+  </aside>
+
+  </div>
 </div>
 {% endblock %}

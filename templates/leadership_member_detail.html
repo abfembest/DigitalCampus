@@ -36,7 +36,7 @@
 ═══════════════════════════════════════════════════════ -->
 <section class="py-10 sm:py-14 lg:py-16 bg-gray-50">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 lg:gap-12 items-start">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 lg:gap-12 items-start">
 
       <!-- Photo -->
       <div class="relative aspect-square rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center mx-auto md:mx-0 w-full max-w-xs">
@@ -51,9 +51,25 @@
 
       <!-- Biography -->
       <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-        <h2 class="text-lg sm:text-xl font-bold text-primary-950 font-['Poppins'] mb-4">Biography</h2>
-        {% if member.bio %}
-          <pre class="whitespace-pre-wrap break-words font-sans text-sm sm:text-base text-gray-700 leading-relaxed">{{ member.bio }}</pre>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-primary-950 font-['Poppins'] mb-6 pb-3 border-b-2 border-primary-100">Biography</h2>
+        {% if member.bio_blocks %}
+          <div class="bio-content">
+          {% for block in member.bio_blocks %}
+            {% if block.type == 'heading' %}
+              <h3 class="text-base sm:text-lg font-bold text-primary-800 font-['Poppins'] uppercase tracking-wide mt-8 first:mt-0 mb-3 pl-3 py-1.5 border-l-4 border-primary-500 bg-primary-50 rounded-r">{{ block.text }}</h3>
+            {% elif block.type == 'list' %}
+              <ul class="list-disc list-inside space-y-1.5 mb-4 text-sm sm:text-base text-gray-700 break-words">
+                {% for item in block.items %}
+                  <li>{% for text, kind, tel in item %}{% if not forloop.first and kind != 'text' %}<br>{% endif %}{% if kind == 'tel' %}<a href="tel:{{ tel }}" class="text-primary-600 font-semibold underline decoration-primary-300 underline-offset-2 hover:text-primary-800">{{ text }}</a>{% elif kind == 'link' %}{{ text|urlize }}{% else %}{{ text }}{% endif %}{% endfor %}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="mb-4 text-sm sm:text-base text-gray-700 leading-relaxed break-words">
+                {% for line in block.lines %}{% for text, kind, tel in line %}{% if not forloop.first and kind != 'text' %}<br>{% endif %}{% if kind == 'tel' %}<a href="tel:{{ tel }}" class="text-primary-600 font-semibold underline decoration-primary-300 underline-offset-2 hover:text-primary-800">{{ text }}</a>{% elif kind == 'link' %}{{ text|urlize }}{% else %}{{ text }}{% endif %}{% endfor %}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </p>
+            {% endif %}
+          {% endfor %}
+          </div>
         {% else %}
           <p class="text-sm text-gray-500">No biography available.</p>
         {% endif %}

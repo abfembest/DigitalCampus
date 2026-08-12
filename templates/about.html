@@ -242,50 +242,24 @@
 
       <!-- Intro text -->
       <div class="order-1 lg:order-2 space-y-4 sm:space-y-5">
-        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
-          {{ site_config.school_name|default:"Melchisedec Graduate Bible Academy" }} is a
-          non-denominational, non-profit Christian education and seminary institution established
-          by the Lord Jesus through His anointed servant Dr. John A. Daniel.
-        </p>
-        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
-          The institution was physically founded by Dr. John A. Daniel on 15th January 2000
-          and approved by the Federal Government of Nigeria as Help and Reconciliation Ministry
-          and Bible Training College, with vested authority to award diploma certificates to its
-          students.
-        </p>
-        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
-          Due to popular demand from both students and graduates — and following the Lord's
-          direction — the institution was upgraded to a degree-awarding university, approved
-          and registered by the Federal Government in November 2007.
-        </p>
+        {% for paragraph in site_config.about_who_we_are_intro %}
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">{{ paragraph }}</p>
+        {% endfor %}
 
         <!-- Key fact chips -->
+        {% if site_config.about_who_we_are_facts %}
         <div class="flex flex-wrap gap-2 sm:gap-3 pt-2">
-          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700
-                        border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
-                        text-xs sm:text-sm font-semibold">
-            <i data-lucide="map-pin" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
-            Lagos, Nigeria
-          </span>
-          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700
-                        border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
-                        text-xs sm:text-sm font-semibold">
-            <i data-lucide="award" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
-            BSc · MSc · PhD
-          </span>
-          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-accent-50 text-accent-700
-                        border border-accent-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
-                        text-xs sm:text-sm font-semibold">
-            <i data-lucide="heart" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
-            Free Tuition
-          </span>
-          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700
-                        border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
-                        text-xs sm:text-sm font-semibold">
-            <i data-lucide="globe" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
-            Non-Denominational
-          </span>
+          {% for fact in site_config.about_who_we_are_facts %}
+            {% cycle 'map-pin' 'award' 'heart' 'globe' as who_we_are_fact_icon silent %}
+            <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700
+                          border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
+                          text-xs sm:text-sm font-semibold">
+              <i data-lucide="{{ who_we_are_fact_icon }}" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+              {{ fact }}
+            </span>
+          {% endfor %}
         </div>
+        {% endif %}
 
         <!-- Action buttons -->
         <div class="flex flex-col sm:flex-row flex-wrap gap-3 pt-2 w-full">
@@ -365,6 +339,7 @@
 </section>
 
 
+{% if history_milestones %}
 <!-- ═══════════════════════════════════════════════════════
      HISTORY TIMELINE
 ═══════════════════════════════════════════════════════ -->
@@ -388,148 +363,117 @@
     </div>
 
     <!-- Timeline -->
-    <div class="max-w-sm sm:max-w-2xl lg:max-w-3xl mx-auto" role="list" aria-label="Historical milestones">
+    <div class="max-w-sm sm:max-w-2xl lg:max-w-5xl mx-auto" role="list" aria-label="Historical milestones">
 
-      {% if history_milestones %}
         {% for milestone in history_milestones %}
-        <div class="relative flex gap-4 sm:gap-6 {% if not forloop.last %}pb-8 sm:pb-10{% endif %}" role="listitem">
-          <!-- Rail + dot -->
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10
-              {% if forloop.first %}bg-primary-600 shadow-lg shadow-primary-200
-              {% elif forloop.last %}bg-accent-500 shadow-lg shadow-accent-200
-              {% else %}bg-white border-2 border-primary-400 shadow-md{% endif %}">
-              {% if forloop.first %}<i data-lucide="flag" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
-              {% elif forloop.last %}<i data-lucide="star" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
-              {% else %}<i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>{% endif %}
+        <div class="relative" role="listitem">
+
+          <!-- Mobile / tablet: rail on the left -->
+          <div class="flex gap-4 sm:gap-6 lg:hidden {% if not forloop.last %}pb-8 sm:pb-10{% endif %}">
+            <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                {% if forloop.first %}bg-primary-600 shadow-lg shadow-primary-200
+                {% elif forloop.last %}bg-accent-500 shadow-lg shadow-accent-200
+                {% else %}bg-white border-2 border-primary-400 shadow-md{% endif %}">
+                {% if forloop.first %}<i data-lucide="flag" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+                {% elif forloop.last %}<i data-lucide="star" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+                {% else %}<i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>{% endif %}
+              </div>
+              {% if not forloop.last %}
+              <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+              {% endif %}
             </div>
-            {% if not forloop.last %}
-            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
-            {% endif %}
+            <div class="flex-1 pb-2">
+              <span class="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold tracking-widest uppercase px-2.5 sm:px-3 py-1 rounded-full mb-2 sm:mb-3
+                {% if forloop.first %}bg-primary-600 text-white
+                {% elif forloop.last %}bg-accent-500 text-white
+                {% else %}bg-primary-100 text-primary-700{% endif %}"
+                    aria-label="Year: {{ milestone.year }}">
+                <i data-lucide="calendar" class="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true"></i>
+                {{ milestone.year }}
+              </span>
+              <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6
+                {% if forloop.first %}border-l-4 border-primary-600
+                {% elif forloop.last %}border-l-4 border-accent-500
+                {% else %}border-l-4 border-primary-300{% endif %}">
+                <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-1.5 sm:mb-2 font-['Poppins']">{{ milestone.title }}</h3>
+                <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">{{ milestone.description }}</p>
+              </article>
+            </div>
           </div>
-          <!-- Card -->
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold tracking-widest uppercase px-2.5 sm:px-3 py-1 rounded-full mb-2 sm:mb-3
-              {% if forloop.first %}bg-primary-600 text-white
-              {% elif forloop.last %}bg-accent-500 text-white
-              {% else %}bg-primary-100 text-primary-700{% endif %}"
-                  aria-label="Year: {{ milestone.year }}">
-              <i data-lucide="calendar" class="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true"></i>
-              {{ milestone.year }}
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6
-              {% if forloop.first %}border-l-4 border-primary-600
-              {% elif forloop.last %}border-l-4 border-accent-500
-              {% else %}border-l-4 border-primary-300{% endif %}">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-1.5 sm:mb-2 font-['Poppins']">{{ milestone.title }}</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">{{ milestone.description }}</p>
-            </article>
+
+          <!-- Desktop: alternating sides of a centered rail -->
+          <div class="hidden lg:grid lg:grid-cols-12 {% if not forloop.last %}lg:pb-12{% endif %}">
+
+            <!-- Left slot (odd position) -->
+            <div class="lg:col-span-5 lg:pr-8 lg:justify-self-end lg:self-start">
+              {% if not forloop.counter|divisibleby:"2" %}
+              <div class="max-w-md">
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3
+                  {% if forloop.first %}bg-primary-600 text-white
+                  {% elif forloop.last %}bg-accent-500 text-white
+                  {% else %}bg-primary-100 text-primary-700{% endif %}"
+                      aria-label="Year: {{ milestone.year }}">
+                  <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i>
+                  {{ milestone.year }}
+                </span>
+                <article class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-6 border-r-4
+                  {% if forloop.first %}border-primary-600
+                  {% elif forloop.last %}border-accent-500
+                  {% else %}border-primary-300{% endif %}">
+                  <h3 class="font-bold text-lg text-primary-950 mb-2 font-['Poppins']">{{ milestone.title }}</h3>
+                  <p class="text-gray-600 text-sm leading-relaxed">{{ milestone.description }}</p>
+                </article>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Center rail -->
+            <div class="lg:col-span-2 flex flex-col items-center" aria-hidden="true">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                {% if forloop.first %}bg-primary-600 shadow-lg shadow-primary-200
+                {% elif forloop.last %}bg-accent-500 shadow-lg shadow-accent-200
+                {% else %}bg-white border-2 border-primary-400 shadow-md{% endif %}">
+                {% if forloop.first %}<i data-lucide="flag" class="w-5 h-5 text-white"></i>
+                {% elif forloop.last %}<i data-lucide="star" class="w-5 h-5 text-white"></i>
+                {% else %}<i data-lucide="clock" class="w-5 h-5 text-primary-600"></i>{% endif %}
+              </div>
+              {% if not forloop.last %}
+              <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+              {% endif %}
+            </div>
+
+            <!-- Right slot (even position) -->
+            <div class="lg:col-span-5 lg:pl-8 lg:self-start">
+              {% if forloop.counter|divisibleby:"2" %}
+              <div class="max-w-md">
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3
+                  {% if forloop.first %}bg-primary-600 text-white
+                  {% elif forloop.last %}bg-accent-500 text-white
+                  {% else %}bg-primary-100 text-primary-700{% endif %}"
+                      aria-label="Year: {{ milestone.year }}">
+                  <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i>
+                  {{ milestone.year }}
+                </span>
+                <article class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-6 border-l-4
+                  {% if forloop.first %}border-primary-600
+                  {% elif forloop.last %}border-accent-500
+                  {% else %}border-primary-300{% endif %}">
+                  <h3 class="font-bold text-lg text-primary-950 mb-2 font-['Poppins']">{{ milestone.title }}</h3>
+                  <p class="text-gray-600 text-sm leading-relaxed">{{ milestone.description }}</p>
+                </article>
+              </div>
+              {% endif %}
+            </div>
+
           </div>
         </div>
         {% endfor %}
 
-      {% else %}
-        <!-- Static fallback milestones -->
-
-        <!-- 1995 -->
-        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-primary-600 shadow-lg shadow-primary-200">
-              <i data-lucide="flag" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
-            </div>
-            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
-          </div>
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-600 text-white">
-              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 1995
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-600">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Beginning</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">Melchisedec Graduate Bible Academy is a subsidiary of Help and Reconciliation Ministry AKA Harmabitrac World Outreach, physically founded in Lagos Nigeria on October 15, 1995 by Apostle John Daniel.</p>
-            </article>
-          </div>
-        </div>
-
-        <!-- 2000 -->
-        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
-              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
-            </div>
-            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
-          </div>
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
-              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2000
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">From Bible Study to College</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">The Bible study portion of the Ministry was upgraded to an Institution and founded by Dr John A. Daniel on 15th January 2000. It was registered and approved by the Federal Government of Nigeria as Help and Reconciliation Ministry and Bible Training College with authority to award basic, advanced and diploma certificates to its students.</p>
-            </article>
-          </div>
-        </div>
-
-        <!-- 2004 -->
-        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
-              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
-            </div>
-            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
-          </div>
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
-              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2004
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Expansion — USA Campus</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">In January 2004, Apostle John Daniel founded Help and Reconciliation Ministry and Bible Training College Newark NJ USA as a non-profit organization, providing the same services as the Lagos office but with particular attention to social and charitable services. See <a href="http://www.harmabitrac.org" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline focus:outline-none focus:ring-1 focus:ring-primary-600 rounded">www.harmabitrac.org</a> for details.</p>
-            </article>
-          </div>
-        </div>
-
-        <!-- 2007 -->
-        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
-              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
-            </div>
-            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
-          </div>
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
-              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2007
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Government Approval</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">We applied to the Federal Ministry of Education Nigeria, and after 2 years of inspecting our core requirements, we were finally approved and registered by the Federal Government of Nigeria in November 2007 as Melchisedec Graduate Bible Academy Lagos Nigeria.</p>
-            </article>
-          </div>
-        </div>
-
-        <!-- 2024 -->
-        <div class="relative flex gap-4 sm:gap-6" role="listitem">
-          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-accent-500 shadow-lg shadow-accent-200">
-              <i data-lucide="star" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
-            </div>
-          </div>
-          <div class="flex-1 pb-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-accent-500 text-white">
-              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2024
-            </span>
-            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-accent-500">
-              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">From College to University</h3>
-              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">Due to continued demand from both students and graduates of the institution who could not afford tuition fees for degree programs, the Lord granted our request to further upgrade the institution to a degree awarding university (Bachelors, Masters and Doctorate).</p>
-            </article>
-          </div>
-        </div>
-
-      {% endif %}
-
     </div>
   </div>
 </section>
+{% endif %}
 
 
 <!-- ═══════════════════════════════════════════════════════
@@ -645,7 +589,10 @@
             <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
             <p class="text-xs text-primary-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
             {% if member.bio %}
-              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio_preview }}</p>
+              {% if member.bio_has_more %}
+                <a href="{% url 'eduweb:leadership_member_detail' member.pk %}" class="inline-block text-xs font-semibold text-primary-600 hover:text-primary-700 mt-1">Read more</a>
+              {% endif %}
             {% endif %}
           </div>
         </article>
@@ -723,7 +670,10 @@
             <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
             <p class="text-xs text-blue-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
             {% if member.bio %}
-              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio_preview }}</p>
+              {% if member.bio_has_more %}
+                <a href="{% url 'eduweb:leadership_member_detail' member.pk %}" class="inline-block text-xs font-semibold text-primary-600 hover:text-primary-700 mt-1">Read more</a>
+              {% endif %}
             {% endif %}
           </div>
         </article>
@@ -793,7 +743,10 @@
             <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
             <p class="text-xs text-purple-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
             {% if member.bio %}
-              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio_preview }}</p>
+              {% if member.bio_has_more %}
+                <a href="{% url 'eduweb:leadership_member_detail' member.pk %}" class="inline-block text-xs font-semibold text-primary-600 hover:text-primary-700 mt-1">Read more</a>
+              {% endif %}
             {% endif %}
           </div>
         </article>
@@ -863,7 +816,10 @@
             <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
             <p class="text-xs text-emerald-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
             {% if member.bio %}
-              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio_preview }}</p>
+              {% if member.bio_has_more %}
+                <a href="{% url 'eduweb:leadership_member_detail' member.pk %}" class="inline-block text-xs font-semibold text-primary-600 hover:text-primary-700 mt-1">Read more</a>
+              {% endif %}
             {% endif %}
           </div>
         </article>

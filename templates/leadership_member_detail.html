@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ member.name }} — {{ member.role }} | {{ site_config.school_short_name|default:"MELBAC" }}{% endblock %}
+
+{% block meta_tags %}
+<meta name="description" content="{{ member.name }}, {{ member.role }} at {{ site_config.school_name|default:'Melchisedec Graduate Bible Academy' }}.">
+<meta name="robots" content="noindex, follow">
+{% endblock %}
+
+{% block content %}
+<main id="main-content">
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════ -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white">
+  <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+    <div class="absolute top-10 left-4 sm:left-10 w-40 h-40 sm:w-64 sm:h-64 bg-accent-400 rounded-full blur-3xl opacity-10"></div>
+  </div>
+  <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-8 sm:pt-10 pb-8 sm:pb-10">
+    <button type="button"
+            onclick="if (window.history.length > 1) { history.back(); } else { window.location.href = '{% url 'eduweb:about' %}#leadership'; }"
+            class="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm font-semibold mb-6 sm:mb-8 focus:outline-none focus:ring-2 focus:ring-accent-300 rounded">
+      <i data-lucide="arrow-left" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+      Back
+    </button>
+    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold font-['Poppins'] leading-tight">{{ member.name }}</h1>
+    <p class="text-accent-300 font-semibold mt-1.5 text-sm sm:text-base">{{ member.role }}</p>
+    <p class="text-white/50 text-xs sm:text-sm mt-1">{{ member.get_member_type_display }}</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PROFILE
+═══════════════════════════════════════════════════════ -->
+<section class="py-10 sm:py-14 lg:py-16 bg-gray-50">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8 lg:gap-12 items-start">
+
+      <!-- Photo -->
+      <div class="relative aspect-square rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center mx-auto md:mx-0 w-full max-w-xs">
+        {% if member.photo %}
+          <img src="{{ member.photo.url }}"
+               alt="Portrait of {{ member.name }}"
+               class="absolute inset-0 w-full h-full object-cover object-center">
+        {% else %}
+          <i data-lucide="user-circle" class="w-20 h-20 sm:w-24 sm:h-24 text-primary-400" aria-hidden="true"></i>
+        {% endif %}
+      </div>
+
+      <!-- Biography -->
+      <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+        <h2 class="text-lg sm:text-xl font-bold text-primary-950 font-['Poppins'] mb-4">Biography</h2>
+        {% if member.bio %}
+          <pre class="whitespace-pre-wrap break-words font-sans text-sm sm:text-base text-gray-700 leading-relaxed">{{ member.bio }}</pre>
+        {% else %}
+          <p class="text-sm text-gray-500">No biography available.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+{% endblock %}

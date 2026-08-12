@@ -1040,11 +1040,29 @@ class SiteConfigAboutForm(forms.ModelForm):
         }),
         help_text='Enter each core value on its own line. Saved as a JSON list automatically.',
     )
+    about_who_we_are_intro = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            **_SC_T, 'rows': 8,
+            'placeholder': 'One paragraph per line e.g.\nMIU is a non-denominational, non-profit Christian '
+                           'education and seminary institution...\nThe institution was physically founded on...',
+        }),
+        help_text='Enter each paragraph on its own line. Saved as a JSON list automatically.',
+    )
+    about_who_we_are_facts = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            **_SC_T, 'rows': 4,
+            'placeholder': 'One fact per line e.g.\nLagos, Nigeria\nBSc · MSc · PhD\nFree Tuition',
+        }),
+        help_text='Enter each fact chip on its own line. Saved as a JSON list automatically.',
+    )
 
     class Meta:
         model = SiteConfig
         fields = [
             'about_mission', 'about_vision', 'about_values',
+            'about_who_we_are_intro', 'about_who_we_are_facts',
             'virtual_tour_url',
         ]
         widgets = {
@@ -1058,13 +1076,24 @@ class SiteConfigAboutForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.about_values:
-            vals = self.instance.about_values
-            if isinstance(vals, list):
-                self.initial['about_values'] = '\n'.join(vals)
+        for field_name in ('about_values', 'about_who_we_are_intro', 'about_who_we_are_facts'):
+            if self.instance:
+                vals = getattr(self.instance, field_name, None)
+                if isinstance(vals, list):
+                    self.initial[field_name] = '\n'.join(vals)
 
     def clean_about_values(self):
         raw = self.cleaned_data.get('about_values', '')
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        return lines
+
+    def clean_about_who_we_are_intro(self):
+        raw = self.cleaned_data.get('about_who_we_are_intro', '')
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        return lines
+
+    def clean_about_who_we_are_facts(self):
+        raw = self.cleaned_data.get('about_who_we_are_facts', '')
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
         return lines
 
@@ -1101,7 +1130,13 @@ class InstitutionMemberForm(forms.ModelForm):
             'member_type':   forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white'}),
             'name':          forms.TextInput(attrs=_SC_I),
             'role':          forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Vice Chancellor'"}),
-            'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
+            'bio':           forms.Textarea(attrs={
+                **_SC_T, 'rows': 10,
+                'placeholder': "First line: a short summary shown on the About page card.\n"
+                               "Everything after that: the full biography, shown only on the "
+                               "“Read more” page — formatted exactly as you type it here "
+                               "(line breaks and spacing are preserved).",
+            }),
             'photo':         forms.ClearableFileInput(attrs={
                 'class': 'crop-upload w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 '
                          'file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 '

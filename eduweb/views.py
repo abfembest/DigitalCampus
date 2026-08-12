@@ -999,7 +999,7 @@ def about(request):
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
     admin_board_members = (
         InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
-        .order_by('name')
+        .order_by('-is_who_we_are', 'name')
     )
     who_we_are_member = (
         InstitutionMember.objects.filter(is_who_we_are=True, is_active=True).first()
@@ -1036,6 +1036,16 @@ def about(request):
         'affiliations_list':  partners_qs.filter(category='affiliation'),
         'accreditations_list': partners_qs.filter(category='accreditation'),
     })
+
+
+@check_for_auth
+def leadership_member_detail(request, pk):
+    from .models import InstitutionMember
+    member = get_object_or_404(InstitutionMember, pk=pk, is_active=True)
+    return render(request, 'leadership_member_detail.html', {
+        'member': member,
+    })
+
 
 @check_for_auth
 def all_programs(request):

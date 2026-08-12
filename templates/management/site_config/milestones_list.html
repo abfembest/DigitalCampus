@@ -34,10 +34,7 @@
     </div>
     <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
       <div class="text-2xl font-bold text-green-600">
-        {% with active_count=0 %}
-          {% for m in milestones %}{% if m.is_active %}{% with active_count=active_count|add:1 %}{% endwith %}{% endif %}{% endfor %}
-        {% endwith %}
-        {{ milestones|length }}
+        {{ active_count }}
       </div>
       <div class="text-xs text-gray-500 mt-0.5">Active</div>
     </div>

@@ -103,6 +103,68 @@
       </div>
     </div>
 
+    <!-- ── WHO WE ARE — INTRO TEXT ── -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-800"><i class="fas fa-user-tie text-primary-500 mr-2"></i>Who We Are — Intro Text</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Paragraphs shown beside the founder's photo in the "Who We Are" section on the about page.</p>
+      </div>
+      <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.about_who_we_are_intro.label }}</label>
+          {{ form.about_who_we_are_intro }}
+          <p class="text-xs text-gray-400 mt-1">{{ form.about_who_we_are_intro.help_text }}</p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-700 mb-3">Current paragraphs preview</p>
+          {% if site.about_who_we_are_intro %}
+          <div class="space-y-2">
+            {% for paragraph in site.about_who_we_are_intro %}
+            <div class="p-2.5 bg-gray-50 border border-gray-200 rounded-lg">
+              <span class="text-sm text-gray-700">{{ paragraph }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="p-4 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-center">
+            <i class="fas fa-align-left text-gray-300 text-xl mb-2 block"></i>
+            <p class="text-xs text-gray-400">No intro text set yet. Add paragraphs on the left.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WHO WE ARE — FACT CHIPS ── -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-800"><i class="fas fa-tags text-primary-500 mr-2"></i>Who We Are — Fact Chips</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Short pill-shaped facts (e.g. "Lagos, Nigeria") shown under the intro text.</p>
+      </div>
+      <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.about_who_we_are_facts.label }}</label>
+          {{ form.about_who_we_are_facts }}
+          <p class="text-xs text-gray-400 mt-1">{{ form.about_who_we_are_facts.help_text }}</p>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-700 mb-3">Current chips preview</p>
+          {% if site.about_who_we_are_facts %}
+          <div class="flex flex-wrap gap-2">
+            {% for fact in site.about_who_we_are_facts %}
+            <span class="inline-flex items-center gap-1.5 bg-primary-50 text-primary-700 border border-primary-200 px-3 py-1.5 rounded-full text-xs font-semibold">{{ fact }}</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="p-4 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-center">
+            <i class="fas fa-tags text-gray-300 text-xl mb-2 block"></i>
+            <p class="text-xs text-gray-400">No fact chips set yet. Add them on the left.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
     <!-- ── VIRTUAL CAMPUS TOUR ── -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">

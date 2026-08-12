@@ -177,6 +177,29 @@ def blog_image_upload_path(instance, filename):
     return f'blog/{instance.slug}/{safe_filename}'
 
 
+def default_about_who_we_are_intro():
+    """Seeds SiteConfig.about_who_we_are_intro with the paragraphs the about
+    page used to hardcode, so the migration doesn't blank the page out."""
+    return [
+        "Melchisedec International University is a non-denominational, non-profit "
+        "Christian education and seminary institution established by the Lord Jesus "
+        "through His anointed servant Dr. John A. Daniel.",
+        "The institution was physically founded by Dr. John A. Daniel on 15th January "
+        "2000 and approved by the Federal Government of Nigeria as Help and "
+        "Reconciliation Ministry and Bible Training College, with vested authority to "
+        "award diploma certificates to its students.",
+        "Due to popular demand from both students and graduates — and following the "
+        "Lord's direction — the institution was upgraded to a degree-awarding "
+        "university, approved and registered by the Federal Government in November 2007.",
+    ]
+
+
+def default_about_who_we_are_facts():
+    """Seeds SiteConfig.about_who_we_are_facts with the fact chips the about
+    page used to hardcode, so the migration doesn't blank the page out."""
+    return ['Lagos, Nigeria', 'BSc · MSc · PhD', 'Free Tuition', 'Non-Denominational']
+
+
 # Maps international/alias term keys → the canonical semester keys used on
 # Course.semester. AcademicSession stores term_dates with keys from
 # AcademicSession.TERM_CHOICES (first/second/third/fall/spring/summer/
@@ -472,6 +495,22 @@ class SiteConfig(models.Model):
             'List of core values shown in the Values card. '
             'Store as a JSON array of strings, e.g. '
             '["Excellence in Education", "Diversity & Inclusion", "Innovation & Creativity", "Global Citizenship"]'
+        )
+    )
+    about_who_we_are_intro = models.JSONField(
+        default=default_about_who_we_are_intro,
+        blank=True,
+        help_text=(
+            'Paragraphs shown beside the founder photo in the "Who We Are" section. '
+            'Store as a JSON array of strings — one paragraph per entry.'
+        )
+    )
+    about_who_we_are_facts = models.JSONField(
+        default=default_about_who_we_are_facts,
+        blank=True,
+        help_text=(
+            'Short fact chips shown under the "Who We Are" intro text (e.g. "Lagos, Nigeria"). '
+            'Store as a JSON array of strings.'
         )
     )
 
@@ -1217,6 +1256,20 @@ class InstitutionMember(models.Model):
         if self.is_who_we_are:
             InstitutionMember.objects.filter(is_who_we_are=True).exclude(pk=self.pk).update(is_who_we_are=False)
         super().save(*args, **kwargs)
+
+    @property
+    def bio_preview(self):
+        """First line of the bio — shown on the About page card."""
+        if not self.bio or not self.bio.strip():
+            return ''
+        return self.bio.strip().splitlines()[0].strip()
+
+    @property
+    def bio_has_more(self):
+        """Whether the bio has content beyond the first line (i.e. a "Read more" page is worth showing)."""
+        if not self.bio or not self.bio.strip():
+            return False
+        return len(self.bio.strip().splitlines()) > 1
 
 #################### DEPARTMENTS #####################
 

@@ -95,19 +95,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ── Mobile Dropdown Handlers ─────────────────────────────────────────────
+    // Accordion behavior: opening one mobile dropdown closes the others.
+    const mobileDropdowns = [];
+
+    function closeMobileDropdown(entry) {
+        entry.menu.classList.add('hidden');
+        entry.chevron.classList.remove('rotate-180');
+        entry.btn.setAttribute('aria-expanded', 'false');
+    }
+
     function setupMobileDropdown(btnId, menuId, chevronId) {
         const btn     = document.getElementById(btnId);
         const menu    = document.getElementById(menuId);
         const chevron = document.getElementById(chevronId);
 
         if (btn && menu && chevron) {
+            const entry = { btn: btn, menu: menu, chevron: chevron };
+            mobileDropdowns.push(entry);
+
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 const isOpen = !menu.classList.contains('hidden');
+
+                mobileDropdowns.forEach(function (other) {
+                    if (other !== entry) closeMobileDropdown(other);
+                });
+
                 if (isOpen) {
-                    menu.classList.add('hidden');
-                    chevron.classList.remove('rotate-180');
-                    btn.setAttribute('aria-expanded', 'false');
+                    closeMobileDropdown(entry);
                 } else {
                     menu.classList.remove('hidden');
                     chevron.classList.add('rotate-180');

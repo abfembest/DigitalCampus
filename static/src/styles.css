@@ -200,6 +200,20 @@
     font-family: Poppins, system-ui, -apple-system, sans-serif;
   }
 
+  /* Hides the scrollbar on the home page "From Our Socials" horizontal
+     carousel track while keeping it scrollable/swipeable. */
+  .sb-hide { scrollbar-width: none; -ms-overflow-style: none; }
+  .sb-hide::-webkit-scrollbar { display: none; }
+
+  /* Homepage social carousel — cards hold whatever embed code staff pasted
+     in (Instagram/TikTok blockquote+script, YouTube iframe, etc). Platform
+     embed scripts are already responsive to their container; this guards
+     against them overflowing the card and pins every embed to the same
+     height regardless of platform, so cards in a row line up. */
+  .social-embed-wrap { width: 100%; height: 550px; overflow: hidden; }
+  .social-embed-wrap iframe { width: 100% !important; max-width: 100% !important; height: 100% !important; }
+  .social-embed-wrap blockquote { margin: 0 !important; max-width: 100% !important; min-width: 0 !important; height: 100% !important; overflow: hidden; }
+
   .gradient-text {
     background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
     -webkit-background-clip: text;

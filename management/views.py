@@ -70,6 +70,7 @@ from eduweb.models import (
     SystemConfiguration,
     encrypt_secret,
     Testimonial,
+    SocialPost,
     Invoice,
     Transaction,
     UserProfile,
@@ -115,6 +116,7 @@ from management.forms import (
     SiteConfigGeneralForm,
     SiteConfigIndexForm,
     SiteHistoryMilestoneForm,
+    SocialPostForm,
     StaffPayrollForm,
     StudentBadgeForm,
     SystemConfigurationForm,
@@ -6914,6 +6916,118 @@ def testimonial_delete(request, pk):
             logger.exception('testimonial_delete: unexpected error deleting testimonial pk=%s', pk)
             messages.error(request, 'Something went wrong while deleting this testimonial. Please try again.')
     return redirect('management:testimonials_list')
+
+
+# ── SOCIAL POSTS ──────────────────────────────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def social_posts_list(request):
+    if not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view social posts.')
+        return redirect('management:dashboard')
+
+    social_posts = SocialPost.objects.all().order_by('order', '-created_at')
+    return render(request, 'management/site_config/social_posts_list.html', {
+        'social_posts': social_posts,
+        'active_count': social_posts.filter(is_active=True).count(),
+        # The "Add Social Post" modal on this page posts straight to
+        # social_post_create — needs a blank bound form to render its
+        # fields from (see institution_partners_list for the same pattern).
+        'form': SocialPostForm(),
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def social_post_create(request):
+    """"Add Social Post" is a modal on social_posts_list.html, not a
+    standalone page — this view exists purely to handle that modal's POST,
+    mirroring institution_partner_create's pattern. On success it redirects
+    to social_posts_list; the modal's JS detects the redirect and reloads.
+    On validation failure it re-renders just the fields partial, which the
+    modal's JS swaps in without a full navigation."""
+    if request.method != 'POST':
+        return redirect('management:social_posts_list')
+
+    if not _has_permission(request, 'site_content', 'can_create'):
+        messages.error(request, 'You do not have permission to create social posts.')
+        return redirect('management:social_posts_list')
+
+    form = SocialPostForm(request.POST)
+    if form.is_valid():
+        try:
+            with transaction.atomic():
+                post = form.save()
+                AuditLog.objects.create(
+                    user=request.user, action='create',
+                    model_name='SocialPost',
+                    description=f'Created social post: {post}'
+                )
+        except IntegrityError:
+            logger.exception('social_post_create: IntegrityError saving social post')
+            messages.error(request, 'Could not save this social post — please check the details and try again.')
+        except Exception:
+            logger.exception('social_post_create: unexpected error saving social post')
+            messages.error(request, 'Something went wrong while saving this social post. Please try again.')
+        else:
+            messages.success(request, 'Social post created.')
+            return redirect('management:social_posts_list')
+
+    return render(request, 'management/site_config/_social_post_form_fields.html', {
+        'form': form,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def social_post_edit(request, pk):
+    """Same modal as "Add Social Post" on social_posts_list.html, populated
+    by fetching this view's GET response (the fields partial, pre-filled
+    from the instance) and swapping it into the modal body — mirrors
+    institution_partner_edit's pattern."""
+    social_post = get_object_or_404(SocialPost, pk=pk)
+    if request.method == 'POST':
+        if not _has_permission(request, 'site_content', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit social posts.')
+            return redirect('management:social_posts_list')
+
+        form = SocialPostForm(request.POST, instance=social_post)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                    AuditLog.objects.create(
+                        user=request.user, action='update',
+                        model_name='SocialPost',
+                        description=f'Updated social post: {social_post}'
+                    )
+            except IntegrityError:
+                logger.exception('social_post_edit: IntegrityError saving social post pk=%s', pk)
+                messages.error(request, 'Could not save this social post — please check the details and try again.')
+            else:
+                messages.success(request, 'Social post updated.')
+                return redirect('management:social_posts_list')
+    else:
+        form = SocialPostForm(instance=social_post)
+    return render(request, 'management/site_config/_social_post_form_fields.html', {
+        'form': form, 'social_post': social_post,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+@require_permission('site_content', 'can_delete', redirect_to='management:social_posts_list')
+def social_post_delete(request, pk):
+    social_post = get_object_or_404(SocialPost, pk=pk)
+    if request.method == 'POST':
+        try:
+            social_post.delete()
+            messages.success(request, 'Social post deleted.')
+        except Exception:
+            logger.exception('social_post_delete: unexpected error deleting social post pk=%s', pk)
+            messages.error(request, 'Something went wrong while deleting this social post. Please try again.')
+    return redirect('management:social_posts_list')
 
 
 # ── INSTITUTION MEMBERS ───────────────────────────────────────────────────────

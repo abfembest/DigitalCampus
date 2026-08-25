@@ -965,7 +965,7 @@ THEOLOGY_SCHOOL_HOST = 'theology.miuedu.com'
 
 @check_for_auth
 def index(request):
-    from .models import Testimonial
+    from .models import Testimonial, SocialPost
     captcha_question, captcha_answer = generate_captcha()
     request.session['contact_captcha_answer'] = captcha_answer
     current_host = request.get_host().split(':')[0].lower()
@@ -984,6 +984,7 @@ def index(request):
             .order_by('name')[:6]
         ),
         'testimonials': Testimonial.objects.filter(is_active=True).order_by('author_name'),
+        'social_posts': SocialPost.objects.filter(is_active=True).order_by('order', '-created_at'),
         'recent_posts': (
             BlogPost.objects
             .filter(status='published')

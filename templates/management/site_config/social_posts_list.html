@@ -1,0 +1,216 @@
+{% extends 'management/base.html' %}
+{% load static %}
+{% block title %}Social Posts — MIU Admin{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  {# ── Breadcrumb ── #}
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+    <span class="text-gray-400">Site Content</span>
+    <i class="fas fa-chevron-right text-xs"></i>
+    <span class="text-gray-800 font-medium">Social Posts</span>
+  </nav>
+
+  {# ── Page header ── #}
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Social Posts</h1>
+      <p class="text-gray-500 mt-1 text-sm">Reels, shorts and posts shown in the "From Our Socials" carousel on the home page.</p>
+    </div>
+    {% if permissions.site_content.can_create %}
+    <button type="button" id="socialPostAddBtn"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm flex-shrink-0 transition-colors">
+      <i class="fas fa-plus"></i> Add Social Post
+    </button>
+    {% endif %}
+  </div>
+
+  {# ── Stats strip ── #}
+  <div class="grid grid-cols-2 gap-4 mb-8">
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+      <div class="text-2xl font-bold text-primary-600">{{ social_posts|length }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Total Posts</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+      <div class="text-2xl font-bold text-green-600">{{ active_count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Visible on Site</div>
+    </div>
+  </div>
+
+  {# ── List ── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div class="overflow-x-auto p-5">
+      <table id="socialPostsDataTable" class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+          <tr>
+            <th class="py-3 px-5 text-left font-semibold">Post</th>
+            <th class="py-3 px-5 text-left font-semibold">Order</th>
+            <th class="py-3 px-5 text-left font-semibold">Status</th>
+            <th class="py-3 px-5 text-left font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for post in social_posts %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-3">
+                <span class="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                  <i class="fas fa-share-alt text-primary-600 text-xs" aria-hidden="true"></i>
+                </span>
+                <div class="min-w-0">
+                  <div class="font-medium text-gray-800 truncate">{{ post.caption|default:"Untitled post" }}</div>
+                  <div class="text-xs text-gray-400 font-mono truncate max-w-xs">{{ post.embed_code|truncatechars:70 }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-4 px-5 text-gray-600">{{ post.order }}</td>
+            <td class="py-4 px-5">
+              {% if post.is_active %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Hidden
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-2">
+                {% if permissions.site_content.can_edit %}
+                <button type="button" onclick="socialPostModal.openForEdit('{{ post.pk }}')"
+                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                  <i class="fas fa-edit text-sm" aria-hidden="true"></i>
+                </button>
+                {% endif %}
+                {% if permissions.site_content.can_delete %}
+                <button type="button"
+                        onclick="confirmSocialPostDelete('{% url 'management:social_post_delete' post.pk %}', '{{ post.caption|default:"this post"|escapejs }}')"
+                        class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                  <i class="fas fa-trash-alt text-sm" aria-hidden="true"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr class="empty-row"><td></td><td></td><td></td><td></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not social_posts %}
+      <div class="p-16 text-center">
+        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-share-alt text-3xl text-gray-300"></i>
+        </div>
+        <p class="font-semibold text-gray-600 mb-1">No social posts yet</p>
+        <p class="text-sm text-gray-400 mb-4">Add a reel, short or post to display in the home page carousel.</p>
+        {% if permissions.site_content.can_create %}
+        <button type="button" class="js-open-social-post-modal inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-colors">
+          <i class="fas fa-plus"></i> Add First Post
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<form id="deleteForm" method="post" action="" style="display:none;">{% csrf_token %}</form>
+
+<!-- Create/Edit modal -->
+<div id="socialPostModal" class="fixed inset-0 z-50 hidden items-stretch sm:items-center justify-center sm:p-3" style="background: rgba(15,23,42,.55);">
+  <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[97vh] flex flex-col">
+    <div class="px-4 sm:px-5 py-2.5 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <h2 class="text-base font-semibold text-gray-800 font-display" id="socialPostModalTitle">Add Social Post</h2>
+      <button type="button" id="socialPostModalCloseBtn" data-modal-close class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">
+        <i class="fas fa-times text-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="px-4 sm:px-5 py-3 overflow-y-auto overflow-x-hidden flex-1 min-h-0" id="socialPostModalBody">
+      <form method="post" action="{% url 'management:social_post_create' %}" id="socialPostModalForm">
+        {% csrf_token %}
+        {% include 'management/site_config/_social_post_form_fields.html' %}
+      </form>
+    </div>
+    <div class="px-4 sm:px-5 py-2.5 border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 shrink-0">
+      <button type="button" id="socialPostModalCancelBtn" data-modal-close
+              class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium">
+        Cancel
+      </button>
+      <button type="submit" form="socialPostModalForm" id="socialPostModalSubmitBtn"
+              class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+        <i class="fas fa-save mr-1.5" aria-hidden="true"></i>
+        <span id="socialPostModalSubmitLabel">Create Post</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmSocialPostDelete(url, caption) {
+  confirmAdminDelete({
+    url: url,
+    title: 'Delete Social Post?',
+    html: 'Are you sure you want to delete <strong>' + caption + '</strong>? This is permanent and cannot be undone.',
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  try {
+    $('#socialPostsDataTable').DataTable({
+      pageLength: 10,
+      order: [[1, 'asc']],
+      columns: [null, null, null, { orderable: false, searchable: false }],
+      dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 pt-4 border-t"ip>',
+      language: {
+        search: '_INPUT_',
+        searchPlaceholder: 'Search posts…',
+        lengthMenu: 'Show _MENU_',
+        info: '_START_–_END_ of _TOTAL_',
+        paginate: {
+          previous: '<i class="fas fa-chevron-left"></i>',
+          next: '<i class="fas fa-chevron-right"></i>'
+        },
+        emptyTable: 'No posts found'
+      },
+      initComplete: function () {
+        var api = this.api();
+        if (api.page.info().recordsTotal === 1) {
+          var firstRow = api.row(0).data();
+          if (firstRow && firstRow[0] === '') { api.clear().draw(); }
+        }
+      }
+    });
+  } catch (e) {}
+});
+
+var socialPostModal = createAjaxModal({
+  modalId: 'socialPostModal',
+  bodyId: 'socialPostModalBody',
+  formId: 'socialPostModalForm',
+  titleId: 'socialPostModalTitle',
+  submitBtnId: 'socialPostModalSubmitBtn',
+  submitLabelId: 'socialPostModalSubmitLabel',
+  fieldsPartialId: 'socialPostFormFieldsPartial',
+  createUrl: '{% url "management:social_post_create" %}',
+  editUrlTemplate: '{% url "management:social_post_edit" 0 %}',
+  createTitle: 'Add Social Post',
+  createLabel: 'Create Post',
+  editTitle: 'Edit Social Post',
+  editLabel: 'Save Changes',
+});
+
+document.querySelectorAll('#socialPostAddBtn, .js-open-social-post-modal').forEach(function (trigger) {
+  trigger.addEventListener('click', function (e) {
+    e.preventDefault();
+    socialPostModal.openForCreate();
+  });
+});
+</script>
+{% endblock %}

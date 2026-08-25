@@ -15,7 +15,7 @@ from .models import (
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SiteConfig, SiteHistoryMilestone, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
-    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, FeePayment, Exam, ExamQuestion, ExamStatusLog, StudentExamResponse
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, SocialPost, FeePayment, Exam, ExamQuestion, ExamStatusLog, StudentExamResponse
 )
 
 
@@ -185,6 +185,14 @@ class TestimonialAdmin(admin.ModelAdmin):
         }),
     )
 
+
+# ==================== SOCIAL POSTS ====================
+@admin.register(SocialPost)
+class SocialPostAdmin(admin.ModelAdmin):
+    list_display  = ('__str__', 'order', 'is_active')
+    list_filter   = ('is_active',)
+    search_fields = ('caption', 'embed_code')
+    list_editable = ('order', 'is_active')
 
 
 @admin.register(FeePayment)

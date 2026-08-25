@@ -730,6 +730,55 @@ function admTab(btn, panelId) {
 </section>
 {% endif %}
 
+<!-- From Our Socials — reels/images pasted in by staff via SocialPost admin,
+     no platform picking required, just embed code in → shown here. -->
+{% if social_posts %}
+<section class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="social-heading">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-10 sm:mb-12">
+            <div class="text-center sm:text-left w-full sm:w-auto">
+                <h2 id="social-heading" class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 font-display">From Our Socials</h2>
+                <p class="text-gray-600 mt-2 sm:mt-3 text-base lg:text-lg">Follow {{ site_config.school_short_name|default:"MIU" }} across our social channels</p>
+            </div>
+            <div class="hidden sm:flex items-center gap-2">
+                <button type="button" id="socialPrev" class="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-primary-950 hover:bg-purple-50 transition" aria-label="Scroll left">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <button type="button" id="socialNext" class="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-primary-950 hover:bg-purple-50 transition" aria-label="Scroll right">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="socialTrack" class="flex justify-center gap-5 overflow-x-auto snap-x snap-mandatory pb-2 sb-hide scroll-smooth">
+            {% for post in social_posts %}
+            <div class="social-embed-card snap-start shrink-0 w-full sm:w-[calc((100%-20px)/2)] lg:w-[calc((100%-40px)/3)] rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-lg">
+                <div class="social-embed-wrap">{{ post.embed_code|safe }}</div>
+                {% if post.caption %}
+                <p class="px-4 py-3 text-sm text-gray-600">{{ post.caption }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+<script>
+(function () {
+    var track = document.getElementById('socialTrack');
+    var prev  = document.getElementById('socialPrev');
+    var next  = document.getElementById('socialNext');
+    if (!track) return;
+    function scrollByPage(dir) {
+        // Move a full page at a time (however many cards are visible at once —
+        // 1 or 2 depending on breakpoint) so "next" always lands on a fresh set.
+        track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' });
+    }
+    if (prev) prev.addEventListener('click', function () { scrollByPage(-1); });
+    if (next) next.addEventListener('click', function () { scrollByPage(1); });
+})();
+</script>
+{% endif %}
+
 <!-- Contact Form Section -->
 <section id="contact" class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="contact-heading">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">

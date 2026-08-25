@@ -211,6 +211,12 @@ urlpatterns = [
     path('site-config/testimonials/<int:pk>/edit/', views.testimonial_edit, name='testimonial_edit'),
     path('site-config/testimonials/<int:pk>/delete/', views.testimonial_delete, name='testimonial_delete'),
 
+    # Social Posts
+    path('site-config/social-posts/', views.social_posts_list, name='social_posts_list'),
+    path('site-config/social-posts/create/', views.social_post_create, name='social_post_create'),
+    path('site-config/social-posts/<int:pk>/edit/', views.social_post_edit, name='social_post_edit'),
+    path('site-config/social-posts/<int:pk>/delete/', views.social_post_delete, name='social_post_delete'),
+
     # Institution Members
     path('site-config/members/', views.institution_members_list, name='institution_members_list'),
     path('site-config/members/create/', views.institution_member_create, name='institution_member_create'),

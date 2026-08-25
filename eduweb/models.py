@@ -607,6 +607,30 @@ class Testimonial(models.Model):
     def __str__(self):
         return f"{self.author_name} – {self.author_role}"
 
+
+class SocialPost(models.Model):
+    """A single social media post (Instagram/TikTok reel, YouTube Short,
+    image, etc.) shown in the homepage "From Our Socials" carousel.
+    `embed_code` holds the raw iframe/blockquote snippet copied from that
+    platform's own "Embed" button — same pattern as SiteConfig's
+    promo_video_url/campus_map_embed_url — because Instagram/TikTok/YouTube
+    don't support embedding from a bare post URL alone. No platform field
+    on purpose: paste the embed code and it just shows, nothing to pick."""
+    embed_code = models.TextField(help_text="Full embed/iframe code copied from the platform's own \"Embed\" option — just paste and save")
+    caption = models.CharField(max_length=200, blank=True, help_text="Optional short caption shown under the embed")
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Social Post'
+        verbose_name_plural = 'Social Posts'
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.caption or f"Social post #{self.pk}"
+
 # ==================== ANNOUNCEMENTS ====================
 class Announcement(models.Model):
     """System-wide or course-specific announcements"""

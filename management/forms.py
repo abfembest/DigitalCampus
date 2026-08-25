@@ -31,6 +31,7 @@ from eduweb.models import (
     Review,
     SiteConfig,
     SiteHistoryMilestone,
+    SocialPost,
     StaffPayroll,
     StudentBadge,
     SystemConfiguration,
@@ -1163,6 +1164,20 @@ class InstitutionPartnerForm(forms.ModelForm):
 
     def clean_logo(self):
         return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
+
+
+class SocialPostForm(forms.ModelForm):
+    class Meta:
+        model = SocialPost
+        fields = ['embed_code', 'caption', 'order', 'is_active']
+        widgets = {
+            'embed_code': forms.Textarea(attrs={
+                **_SC_C, 'rows': 6,
+                'placeholder': "Paste the full embed/iframe code from the platform's own \"Embed\" option",
+            }),
+            'caption': forms.TextInput(attrs={**_SC_I, 'placeholder': "Optional short caption shown under the embed"}),
+            'order':   forms.NumberInput(attrs=_SC_I),
+        }
 
 
 class BrandingConfigForm(forms.Form):
